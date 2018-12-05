@@ -3,8 +3,113 @@
     <head>
         <meta charset="utf-8">
         <title>Booklet Uploader - client demo</title>
+
+        <!-- CSS -->
+        <link rel="stylesheet" href="css/normalize.css" />
+        <link rel="stylesheet" href="css/font.OpenSans.css" />
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+        <link rel="stylesheet" href="/assets/plugins/jscropper/cropper.min.css" />
+        <link rel="stylesheet" href="/assets/css/booklet-uploader.main.css" />
+        <link rel="stylesheet" href="/assets/css/booklet-uploader.panel.css" />
+        <link rel="stylesheet" href="/assets/css/booklet-uploader.uploader.css" />
+        <link rel="stylesheet" href="/assets/css/booklet-uploader.editor.css" />
+        <link rel="stylesheet" href="css/demo.css" />
+
+        <!-- JS -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" charset="utf-8"></script>
+        <script src="/assets/plugins/mustache/mustache.min.js" charset="utf-8"></script>
+        <script src="/assets/plugins/jscropper/cropper.min.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.core.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.locale.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.template.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.utils.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.modifiers.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.file.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.upload.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.panel.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.editor.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.uploader.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.cropper.js" charset="utf-8"></script>
+        <script src="js/demo.js" charset="utf-8"></script>
     </head>
     <body>
-
+        <div id="uploader">
+            <form id="uploader-settings" class="settings">
+                <button id="open-uploader" type="button">Open uploader</button>
+                <div class="option option-multiple">
+                    <input id="option--multiple" type="checkbox" name="multiple" value="true" checked />
+                    <label for="option--multiple">Multiple</label>
+                </div>
+                <div class="option option--max-files">
+                    <label for="option--max-files">Max files</label>
+                    <input id="option--max-files" type="number" name="max_files" value="3" min="0" />
+                    <span class="note">(0 for infinite)</span>
+                </div>
+                <div class="option option--drag-and-drop">
+                    <input id="option--drag-and-drop" type="checkbox" name="drag_and_drop" value="true" checked />
+                    <label for="option--drag-and-drop">Drag and drop</label>
+                </div>
+                <div class="option option--images-only">
+                    <input id="option--images-only" type="checkbox" name="images_only" value="true" checked />
+                    <label for="option--images-only">Images only</label>
+                </div>
+                <div class="crop-selector">
+                    <input id="uploader-crop--free" class="aspect-ratio" type="radio" name="crop" value="" />
+                    <label for="uploader-crop--free">Free</label>
+                    <input id="uploader-crop--3-4" class="aspect-ratio" type="radio" name="crop" value="3/4" checked />
+                    <label for="uploader-crop--3-4">3/4</label>
+                    <input id="uploader-crop--7-9" class="aspect-ratio" type="radio" name="crop" value="7/9" />
+                    <label for="uploader-crop--7-9">7/9</label>
+                    <input id="uploader-crop--1-1" class="aspect-ratio" type="radio" name="crop" value="1/1" />
+                    <label for="uploader-crop--1-1">1/1</label>
+                    <input id="uploader-crop--4-3" class="aspect-ratio" type="radio" name="crop" value="4/3" />
+                    <label for="uploader-crop--4-3">4/3</label>
+                    <input id="uploader-crop--16-9" class="aspect-ratio" type="radio" name="crop" value="16/9" />
+                    <label for="uploader-crop--16-9">16/9</label>
+                </div>
+            </form>
+            <pre id="uploader-result" class="result"></pre>
+        </div>
+        <div id="editor">
+            <form id="editor-settings" class="settings">
+                <button id="open-editor" type="button">Open editor</button>
+                <input id="file-id" type="text" value="e97d6ea0e412fa04ffd950d4a487fa9f" />
+                <div class="option option--effect">
+                    <input id="effect--crop" type="checkbox" name="effects[]" value="crop" checked />
+                    <label for="effect--crop">Crop</label>
+                    <div class="crop-selector">
+                        <input id="editor-crop--free" class="aspect-ratio" type="checkbox" name="crop[]" value="free" />
+                        <label for="editor-crop--free">Free</label>
+                        <input id="editor-crop--3-4" class="aspect-ratio" type="checkbox" name="crop[]" value="3/4" checked />
+                        <label for="editor-crop--3-4">3/4</label>
+                        <input id="editor-crop--7-9" class="aspect-ratio" type="checkbox" name="crop[]" value="7/9" checked />
+                        <label for="editor-crop--7-9">7/9</label>
+                        <input id="editor-crop--1-1" class="aspect-ratio" type="checkbox" name="crop[]" value="1/1" checked />
+                        <label for="editor-crop--1-1">1/1</label>
+                        <input id="editor-crop--4-3" class="aspect-ratio" type="checkbox" name="crop[]" value="4/3" checked />
+                        <label for="editor-crop--4-3">4/3</label>
+                        <input id="editor-crop--16-9" class="aspect-ratio" type="checkbox" name="crop[]" value="16/9" checked />
+                        <label for="editor-crop--16-9">16/9</label>
+                    </div>
+                </div>
+                <div class="option option--effect">
+                    <input id="effect--rotate" type="checkbox" name="effects[]" value="rotate" checked />
+                    <label for="effect--rotate">Rotate</label>
+                </div>
+                <div class="option option--effect">
+                    <input id="effect--mirror" type="checkbox" name="effects[]" value="mirror" checked />
+                    <label for="effect--mirror">Mirror</label>
+                </div>
+                <div class="option option--effect">
+                    <input id="effect--flip" type="checkbox" name="effects[]" value="flip" checked />
+                    <label for="effect--flip">Flip</label>
+                </div>
+                <div class="option option--effect">
+                    <input id="effect--grayscale" type="checkbox" name="effects[]" value="grayscale" checked />
+                    <label for="effect--grayscale">Grayscale</label>
+                </div>
+            </form>
+            <pre id="editor-result" class="result"></pre>
+        </div>
     </body>
 </html>
