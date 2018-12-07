@@ -12,10 +12,11 @@ require_once __DIR__ . '/classes/Response.php';
 require_once __DIR__ . '/classes/Log.php';
 require_once __DIR__ . '/classes/Modifiers.php';
 require_once __DIR__ . '/classes/Image.php';
-
+require_once __DIR__ . '/classes/ExifFixer.php';
 
 // Load helpers
 require_once __DIR__ . '/helpers/CropHelper.php';
+require_once __DIR__ . '/helpers/MimeHelper.php';
 
 require_once __DIR__ . '/routes.php';
 

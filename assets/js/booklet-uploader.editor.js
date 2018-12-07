@@ -155,6 +155,12 @@
                             transformations.notify();
                         }).fail(function() {
 
+                        }).always(function() {
+                            if (default_aspect_ratio && !transformations.crop) {
+                                transformations.crop = { aspect_ratio: default_aspect_ratio };
+
+                                transformations.notify();
+                            }
                         });
                     }).fail(function() {
                         panel.error(plugin.locale.get('errors.load_file'));

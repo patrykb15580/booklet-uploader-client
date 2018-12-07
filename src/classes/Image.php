@@ -2,18 +2,24 @@
 
 class Image
 {
-    public $hash_id, $filename, $mime, $size, $width, $height, $modifiers;
+    public $hash_id;
+    public $filename;
+    public $mime;
+    public $size;
+    public $width;
+    public $height;
+    public $modifiers;
 
     const DEFAULT_MODIFIERS = [
         'rotate' => false,
         'crop' => false,
         'mirror' => false,
         'flip' => false,
-        'grayscale' => false
+        'grayscale' => false,
     ];
-    const MODIFIERS_ORDER = [ 'rotate', 'crop', 'mirror', 'flip', 'grayscale' ];
+    const MODIFIERS_ORDER = ['rotate', 'crop', 'mirror', 'flip', 'grayscale'];
 
-    function __construct(array $attributes)
+    public function __construct(array $attributes)
     {
         foreach ($this->fields() as $key => $value) {
             $this->$key = $value['default'] ?? null;
@@ -27,13 +33,13 @@ class Image
     public function fields()
     {
         return [
-            'hash_id'           => [ 'default' => null ],
-            'filename'          => [ 'default' => null ],
-            'mime'              => [ 'default' => null ],
-            'size'              => [ 'default' => null ],
-            'width'             => [ 'default' => null ],
-            'height'            => [ 'default' => null ],
-            'modifiers'         => [ 'default' => self::DEFAULT_MODIFIERS ],
+            'hash_id' => ['default' => null],
+            'filename' => ['default' => null],
+            'mime' => ['default' => null],
+            'size' => ['default' => null],
+            'width' => ['default' => null],
+            'height' => ['default' => null],
+            'modifiers' => ['default' => self::DEFAULT_MODIFIERS],
         ];
     }
 
@@ -51,22 +57,35 @@ class Image
                 $height = $this->width;
             }
 
-            if ($aspect_ratio) {
-                $this->modifiers['crop'] = Modifiers::cropToProportions($width, $height, $aspect_ratio);
-            }
+            $this->modifiers['crop'] = ($aspect_ratio) ? Modifiers::cropToProportions($width, $height, $aspect_ratio) : false;
+
+            Log::transform('Crop to proportions checker', [
+                'target_ratio' => $aspect_ratio,
+                'original_dimensions' => $this->width . 'x' . $this->height,
+                'source_dimensions' => $width . 'x' . $height,
+                'angle' => $angle,
+                'modifier' => $this->modifiers['crop'],
+            ]);
         } else {
             $width = $params['width'] ?? false;
             $height = $params['height'] ?? false;
             $x = $params['x'] ?? false;
             $y = $params['y'] ?? false;
 
-            if ($x == 0 && $y == 0 && $width == $this->width && $height == $this->height) {
+            if ($x < 0 && $y < 0 && $width == $this->width && $height == $this->height) {
                 return false;
             }
 
             if ($width && $height && $x !== false && $y !== false) {
                 $this->modifiers['crop'] = Modifiers::crop($width, $height, $x, $y);
             }
+
+            Log::transform('Crop checker', [
+                'target_ratio' => $aspect_ratio,
+                'original_dimensions' => $this->width . 'x' . $this->height,
+                'source_dimensions' => $width . 'x' . $height . ' (' . $x . 'x' . $y . ')',
+                'modifier' => $this->modifiers['crop'],
+            ]);
         }
     }
 
