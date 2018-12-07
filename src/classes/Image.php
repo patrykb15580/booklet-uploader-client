@@ -59,7 +59,7 @@ class Image
 
             $this->modifiers['crop'] = ($aspect_ratio) ? Modifiers::cropToProportions($width, $height, $aspect_ratio) : false;
 
-            Log::transform('Crop to proportions checker', [
+            Log::info('Crop to proportions checker', [
                 'target_ratio' => $aspect_ratio,
                 'original_dimensions' => $this->width . 'x' . $this->height,
                 'source_dimensions' => $width . 'x' . $height,
@@ -80,7 +80,7 @@ class Image
                 $this->modifiers['crop'] = Modifiers::crop($width, $height, $x, $y);
             }
 
-            Log::transform('Crop checker', [
+            Log::info('Crop checker', [
                 'target_ratio' => $aspect_ratio,
                 'original_dimensions' => $this->width . 'x' . $this->height,
                 'source_dimensions' => $width . 'x' . $height . ' (' . $x . 'x' . $y . ')',
