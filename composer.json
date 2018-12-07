@@ -1,0 +1,24 @@
+{
+    "name": "patrykb15580/booklet-uploader",
+    "repositories": [
+        {
+            "type": "package",
+            "package": {
+                "name": "patrykb15580/booklet-uploader-client",
+                "version": "dev-master",
+                "type": "package",
+                "source": {
+                    "url": "https://github.com/patrykb15580/booklet-uploader-client.git",
+                    "type": "vcs",
+                    "reference": "master"
+                }
+            }
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "classmap": [
+            "src", "src/classes", "src/helpers"
+        ]
+    }
+}
