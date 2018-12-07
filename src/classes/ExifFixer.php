@@ -23,7 +23,11 @@ class ExifFixer
         $exif = @read_exif_data($this->file_path, 'IFD0');
         $this->exif = ($exif && is_array($exif)) ? array_change_key_case($exif, CASE_LOWER) : false;
 
-        if (!$this->image || !$this->exif || !is_array($this->exif)) {
+        // if (!$this->image || !$this->exif || !is_array($this->exif)) {
+        //     return false;
+        // }
+
+        if (!$this->image) {
             return false;
         }
 

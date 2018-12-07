@@ -33,7 +33,7 @@
     display: block;
     position: relative;
     max-width: 100%;
-    flex: 0 0 calc(100% - 122px);
+    flex: 0 1 calc(100% - 122px);
     list-style-type: none;
     margin: 0px;
     padding: 2px;
