@@ -81,7 +81,6 @@ class Image
             }
 
             Log::info('Crop checker', [
-                'target_ratio' => $aspect_ratio,
                 'original_dimensions' => $this->width . 'x' . $this->height,
                 'source_dimensions' => $width . 'x' . $height . ' (' . $x . 'x' . $y . ')',
                 'modifier' => $this->modifiers['crop'],

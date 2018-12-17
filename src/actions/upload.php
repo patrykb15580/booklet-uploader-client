@@ -49,11 +49,9 @@ $response = $request->makeRequest();
 
 $response_body = $response->body();
 
-if (isset($response_body->errors)) {
+if (isset($response_body->errors) || empty($response_body)) {
     Log::error('Create file error', ['response' => $response_body]);
     Response::error([
-        'config' => Config::all(),
-        'routing' => Routing::routes(),
         'method' => $method,
         'route' => $resource,
         'request' => $request,
@@ -62,4 +60,4 @@ if (isset($response_body->errors)) {
     ]);
 }
 
-Response::success(['file' => $response_body->data]);
+Response::success([ 'file' => $response_body->data ]);

@@ -17,6 +17,8 @@
 /logs/*
 !/logs/.keep
 
+/src/config.json
+
 /vendor/
 
 /awstats/

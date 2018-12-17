@@ -22,7 +22,7 @@ require_once __DIR__ . '/routes.php';
 
 Config::set('DIR', __DIR__);
 Config::set('LOGS_DIRECTORY', dirname(__DIR__) . '/logs');
-Config::set('BASE_URL', 'http://kreator.fotobum.test');
+Config::set('BASE_URL', 'https://kreator.fotobum.pl');
 Config::set('IMAGE_MIME_TYPES', ['image/jpeg', 'image/png', 'image/tiff']);
 
 $params = Request::params();
