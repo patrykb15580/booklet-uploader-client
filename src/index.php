@@ -18,12 +18,9 @@ require_once __DIR__ . '/classes/ExifFixer.php';
 require_once __DIR__ . '/helpers/CropHelper.php';
 require_once __DIR__ . '/helpers/MimeHelper.php';
 
+// Load config and routing
 require_once __DIR__ . '/routes.php';
-
-Config::set('DIR', __DIR__);
-Config::set('LOGS_DIRECTORY', dirname(__DIR__) . '/logs');
-Config::set('BASE_URL', 'https://kreator.fotobum.pl');
-Config::set('IMAGE_MIME_TYPES', ['image/jpeg', 'image/png', 'image/tiff']);
+require_once __DIR__ . '/config.php';
 
 $params = Request::params();
 $action = $params['action'] ?? 'info';
