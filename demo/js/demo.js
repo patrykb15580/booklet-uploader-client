@@ -78,6 +78,32 @@
             });
         });
 
+        $('#upload').on('change', function() {
+            var input = this;
+            var options = $('#uploader-settings').serializeObject();
+            var upload = BookletUploader.upload(input, {
+                autoCropTo: options.crop
+            }).done(function(file) {
+                var json = JSON.stringify(file, undefined, 4);
+                var text = syntaxHighlight(json);
+
+                $('#uploader-result').html(text);
+            }).fail(function() {
+                var json = JSON.stringify({
+                    status: 'error',
+                    message: 'Upload error'
+                }, undefined, 4);
+                var text = syntaxHighlight(json);
+
+                $('#uploader-result').html(text);
+            }).progress(function(progress) {
+                var json = JSON.stringify({ progress: Math.round(progress) + '%' }, undefined, 4);
+                var text = syntaxHighlight(json);
+
+                $('#uploader-result').html(text);
+            });
+        });
+
         $('#open-editor').on('click', function() {
             var file_hash = $('#file-id').val();
             var options = $('#editor-settings').serializeObject();

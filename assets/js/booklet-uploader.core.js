@@ -302,6 +302,26 @@ var BookletUploader = (function($) {
             return plugin.editor.call(plugin, file_hash, options);
         };
 
+        self.upload = function(input, options = {}) {
+            var upload = $.Deferred();
+            var file_info = input.files[0];
+            var file = plugin.file.call(plugin, {
+                name: file_info.name,
+                size: file_info.size,
+                type: file_info.type,
+            });
+
+            file.upload(file_info, options).done(function() {
+                upload.resolve(file);
+            }).fail(function() {
+                upload.reject();
+            }).progress(function(progress) {
+                upload.notify(progress);
+            });
+
+            return upload;
+        }
+
         return self;
     }
 
