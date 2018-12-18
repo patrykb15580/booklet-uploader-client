@@ -303,7 +303,7 @@ var BookletUploader = (function($) {
         };
 
         self.upload = function(input, options = {}) {
-            var upload = $.Deferred();
+            var def = $.Deferred();
             var file_info = input.files[0];
             var file = plugin.file.call(plugin, {
                 name: file_info.name,
@@ -311,15 +311,20 @@ var BookletUploader = (function($) {
                 type: file_info.type,
             });
 
-            file.upload(file_info, options).done(function() {
-                upload.resolve(file);
+            var upload = file.upload(file_info, options).done(function() {
+                def.resolve(file);
             }).fail(function() {
-                upload.reject();
+                def.reject();
             }).progress(function(progress) {
-                upload.notify(progress);
+                def.notify(progress);
             });
 
-            return upload;
+            def.abort = function(callback) {
+                upload.onCancel(callback);
+                upload.cancel();
+            }
+
+            return def;
         }
 
         return self;
