@@ -19,16 +19,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" charset="utf-8"></script>
         <script src="/assets/plugins/mustache/mustache.min.js" charset="utf-8"></script>
         <script src="/assets/plugins/jscropper/cropper.min.js" charset="utf-8"></script>
-        <script src="/assets/js/booklet-uploader.core.js" charset="utf-8"></script>
-        <script src="/assets/js/booklet-uploader.locale.js" charset="utf-8"></script>
-        <script src="/assets/js/booklet-uploader.template.js" charset="utf-8"></script>
-        <script src="/assets/js/booklet-uploader.utils.js" charset="utf-8"></script>
-        <script src="/assets/js/booklet-uploader.file.js" charset="utf-8"></script>
-        <script src="/assets/js/booklet-uploader.upload.js" charset="utf-8"></script>
-        <script src="/assets/js/booklet-uploader.panel.js" charset="utf-8"></script>
-        <script src="/assets/js/booklet-uploader.editor.js" charset="utf-8"></script>
-        <script src="/assets/js/booklet-uploader.uploader.js" charset="utf-8"></script>
-        <script src="/assets/js/booklet-uploader.cropper.js" charset="utf-8"></script>
+        <script src="/assets/js/booklet-uploader.js" charset="utf-8"></script>
         <script src="js/demo.js" charset="utf-8"></script>
     </head>
     <body>
@@ -54,17 +45,21 @@
                     <label for="option--images-only">Images only</label>
                 </div>
                 <div class="crop-selector">
-                    <input id="uploader-crop--free" class="aspect-ratio" type="radio" name="crop" value="" />
+                    <input id="uploader-crop--free" class="aspect-ratio" type="checkbox" name="crop[]" value="" />
                     <label for="uploader-crop--free">Free</label>
-                    <input id="uploader-crop--3-4" class="aspect-ratio" type="radio" name="crop" value="3/4" checked />
+                    <input id="uploader-crop--3-2" class="aspect-ratio" type="checkbox" name="crop[]" value="3/2" checked />
+                    <label for="uploader-crop--3-2">3/2</label>
+                    <input id="uploader-crop--2-3" class="aspect-ratio" type="checkbox" name="crop[]" value="2/3" checked />
+                    <label for="uploader-crop--2-3">2/3</label>
+                    <input id="uploader-crop--3-4" class="aspect-ratio" type="checkbox" name="crop[]" value="3/4" />
                     <label for="uploader-crop--3-4">3/4</label>
-                    <input id="uploader-crop--7-9" class="aspect-ratio" type="radio" name="crop" value="7/9" />
+                    <input id="uploader-crop--7-9" class="aspect-ratio" type="checkbox" name="crop[]" value="7/9" />
                     <label for="uploader-crop--7-9">7/9</label>
-                    <input id="uploader-crop--1-1" class="aspect-ratio" type="radio" name="crop" value="1/1" />
+                    <input id="uploader-crop--1-1" class="aspect-ratio" type="checkbox" name="crop[]" value="1/1" />
                     <label for="uploader-crop--1-1">1/1</label>
-                    <input id="uploader-crop--4-3" class="aspect-ratio" type="radio" name="crop" value="4/3" />
+                    <input id="uploader-crop--4-3" class="aspect-ratio" type="checkbox" name="crop[]" value="4/3" />
                     <label for="uploader-crop--4-3">4/3</label>
-                    <input id="uploader-crop--16-9" class="aspect-ratio" type="radio" name="crop" value="16/9" />
+                    <input id="uploader-crop--16-9" class="aspect-ratio" type="checkbox" name="crop[]" value="16/9" />
                     <label for="uploader-crop--16-9">16/9</label>
                 </div>
             </form>
