@@ -216,7 +216,7 @@ class Modifiers
 
         $modifiers_array = [];
         foreach ($modifiers as $modifier) {
-            $modifier = ltrim($modifier, '-/')
+            $modifier = ltrim($modifier, '-/');
 
             $modifier_params = explode('/', $modifier);
             $modifier_name = array_shift($modifier_params);
