@@ -82,7 +82,7 @@
             var input = this;
             var options = $('#uploader-settings').serializeObject();
             var upload = BookletUploader.upload(input, {
-                autoCropTo: options.crop
+                crop: options.crop
             }).done(function(file) {
                 var json = JSON.stringify(file, undefined, 4);
                 var text = syntaxHighlight(json);

@@ -16,11 +16,6 @@ if ($file) {
 
 Log::error('Update file error', [ 'response' => $response_body ]);
 Response::error([
-    'config' => Config::all(),
-    'routing' => Routing::routes(),
-    'method' => $method,
-    'route' => $resource,
-    'request' => $request,
     'response' => $response,
     'response_body' => $response_body
 ]);

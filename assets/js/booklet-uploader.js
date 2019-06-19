@@ -17,15 +17,9 @@ var BookletUploader = (function($) {
     ];
 
     plugin.utils = {};
-    plugin.utils.isInt = function(value){
-        return Number(value) === value && value % 1 === 0;
-    };
-    plugin.utils.isFloat = function(value){
-        return Number(value) === value && value % 1 !== 0;
-    };
-    plugin.utils.isNumber = function(value) {
-        return plugin.utils.isInt(value) || plugin.utils.isFloat(value);
-    };
+    plugin.utils.isInt = function(value) { return Number(value) === value && value % 1 === 0; };
+    plugin.utils.isFloat = function(value) { return Number(value) === value && value % 1 !== 0; };
+    plugin.utils.isNumber = function(value) { return plugin.utils.isInt(value) || plugin.utils.isFloat(value); };
     plugin.utils.uid = function() {
         var hex_chr = '0123456789abcdef';
         var uid = '';
@@ -137,9 +131,7 @@ var BookletUploader = (function($) {
     };
 
     plugin.utils.aspect_ratio = {};
-    plugin.utils.aspect_ratio.isAspectRatioString = function(string) {
-        return new RegExp(/\d\/\d/gi).test(string);
-    };
+    plugin.utils.aspect_ratio.isAspectRatioString = function(string) { return new RegExp(/\d\/\d/gi).test(string); };
     plugin.utils.aspect_ratio.calculateAspectRatio = function(value) {
         if (plugin.utils.aspect_ratio.isAspectRatioString(value)) {
             return eval(value);
@@ -200,14 +192,8 @@ var BookletUploader = (function($) {
         return { width: width + 'px', height: height + 'px' };
     };
 
-    plugin.isImage = function(mime_type) {
-        return plugin.utils.array.inArray(mime_type, plugin.imageMimeTypes);
-    };
-
-    plugin.isEditable = function(mime_type) {
-        return plugin.utils.array.inArray(mime_type, plugin.editableMimeTypes);
-    };
-
+    plugin.isImage = function(mime_type) { return plugin.utils.array.inArray(mime_type, plugin.imageMimeTypes); };
+    plugin.isEditable = function(mime_type) { return plugin.utils.array.inArray(mime_type, plugin.editableMimeTypes); };
     plugin.request = function(action, data = {}, options = {}) {
         var defaults = {
             dataType: 'json',
@@ -838,10 +824,8 @@ var BookletUploader = (function($) {
 (function($) {
     BookletUploader.registerModule('upload', function(file, options = {}) {
         var plugin = this;
-        var defaults = { autoCropTo: null };
+        var defaults = {};
         var options = $.extend(defaults, options);
-
-        options.autoCropTo = plugin.utils.aspect_ratio.calculateAspectRatio(options.autoCropTo);
 
         var _data = new FormData();
         _data.append('action', 'upload');
@@ -852,9 +836,13 @@ var BookletUploader = (function($) {
         _data.append('file[source]', 'local');
         _data.append(0, file.source, file.name);
 
-        if (options.autoCropTo) {
-            _data.append('transformations[cropToProportions]', options.autoCropTo);
-        }
+        $.each(options, function(key, value) {
+            if (Array.isArray(value)) {
+                value = value.join(',');
+            }
+
+            _data.append('options[' + key + ']', value);
+        });
 
         var _startCallback = null;
         var _cancelCallback = null;
@@ -1456,7 +1444,13 @@ var BookletUploader = (function($) {
                     return true; // continue
                 }
 
-                var upload = file.upload(source_file, { autoCropTo: options.crop });
+                let upload_options = {};
+
+                if (options.crop && (options.crop !== null || options.crop !== false)) {
+                    upload_options.crop = options.crop;
+                }
+
+                var upload = file.upload(source_file, upload_options);
 
                 uploader.element.find('.bu--uploads-list').append(upload.element);
 

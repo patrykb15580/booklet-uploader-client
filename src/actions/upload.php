@@ -1,5 +1,5 @@
 <?php
-$transformations = $params['transformations'] ?? [];
+$transformations = $params['options'] ?? [];
 
 $file_data = $_FILES[0];
 $modifiers = null;
@@ -14,19 +14,36 @@ if (MimeHelper::isImage($file_data['type'])) {
     }
 
     // Crop to given proportions if required
-    if (!empty($transformations['cropToProportions'])) {
-        list($source_width, $source_height) = getimagesize($file_data['tmp_name']);
-        $target_ratio = $transformations['cropToProportions'];
+    if (!empty($transformations['crop'])) {
+        $crop_ratios = explode(',', $transformations['crop']);
 
-        $modifiers = Modifiers::cropToProportions($source_width, $source_height, $target_ratio)['modifier'];
+        list($image_width, $image_height) = getimagesize($file_data['tmp_name']);
+        $image_proportions = $image_width / $image_height;
 
-        if (!$modifiers) {
-            Log::error('Build modifiers error', [
-                'transformations' => $transformations,
-                'dimensions' => $source_width . 'x' . $source_height,
-                'target_ratio' => $target_ratio,
-            ]);
-            Response::error(['Build modifiers error'], 500);
+        $target_ratio = $crop_ratios[0];
+
+        foreach ($crop_ratios as $crop_ratio) {
+            if (!Booklet\Uploader\Utils\StringUtils::isAspectRatioString($crop_ratio)) {
+                $target_ratio = $crop_ratio;
+                break;
+            }
+
+            $proportions = Booklet\Uploader\Utils\CropUtils::aspectRatioStringToProportions($crop_ratio);
+
+            if ($proportions && $proportions < 1 && $image_proportions < 1) {
+                $target_ratio = $crop_ratio;
+                break;
+            }
+
+            if ($proportions && $proportions > 1 && $image_proportions > 1) {
+                $target_ratio = $crop_ratio;
+                break;
+            }
+        }
+
+        if (Booklet\Uploader\Utils\StringUtils::isAspectRatioString($target_ratio)) {
+            $modifier = Modifiers::cropToProportions($image_width, $image_height, $target_ratio);
+            $modifiers = $modifier['modifier'];
         }
     }
 }
@@ -47,17 +64,15 @@ $resource = Routing::generatePath('file_create');
 $request = new Request($method, $resource, $data);
 $response = $request->makeRequest();
 
+$http_code = $response->http_code;
 $response_body = $response->body();
 
-if (isset($response_body->errors) || empty($response_body)) {
-    Log::error('Create file error', ['response' => $response_body]);
-    Response::error([
-        'method' => $method,
-        'route' => $resource,
-        'request' => $request,
-        'response' => $response,
-        'response_body' => $response_body,
-    ]);
+if (empty($response_body->errors) && in_array($http_code, [200, 201])) {
+    Response::success(['file' => $response_body->data]);
 }
 
-Response::success([ 'file' => $response_body->data ]);
+Log::error('Create file error', ['response' => $response_body]);
+Response::error([
+    'response' => $response,
+    'response_body' => $response_body,
+]);

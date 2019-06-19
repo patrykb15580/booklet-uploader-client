@@ -14,6 +14,10 @@ require_once __DIR__ . '/classes/Modifiers.php';
 require_once __DIR__ . '/classes/Image.php';
 require_once __DIR__ . '/classes/ExifFixer.php';
 
+// Utils
+require_once __DIR__ . '/classes/utils/StringUtils.php';
+require_once __DIR__ . '/classes/utils/CropUtils.php';
+
 // Load helpers
 require_once __DIR__ . '/helpers/CropHelper.php';
 require_once __DIR__ . '/helpers/MimeHelper.php';

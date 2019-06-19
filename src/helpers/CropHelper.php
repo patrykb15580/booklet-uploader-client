@@ -4,6 +4,19 @@ class CropHelper
 {
     const PROPORTIONS_TOLLERANCE = 0.01;
 
+    public static function aspectRatioStringToProportions(string $aspect_ratio)
+    {
+        $aspect_ratio = str_replace(':', '/', $aspect_ratio);
+
+        if (preg_match('/\d+\/\d+/i', $aspect_ratio)) {
+            list($w, $h) = explode('/', $aspect_ratio);
+
+            return $w / $h;
+        }
+
+        return false;
+    }
+
     public static function calcCropParamsForCropToProportionsTransformation(int $source_width, int $source_height, $target_ratio)
     {
         $width = $source_width;
