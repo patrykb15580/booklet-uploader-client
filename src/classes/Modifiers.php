@@ -6,36 +6,44 @@ class Modifiers
     const VALID_FORMATS = ['jpg', 'jpeg', 'png', 'tiff'];
 
     const MODIFIERS_ORDER = [
-        'rotate',
-        'crop',
-        'resize',
-        'rounded',
-        'mirror',
-        'flip',
-        'negative',
-        'grayscale',
-        'format',
-        'quality',
-        'preview',
-        'thumbnail',
+        'rotate', 'crop', 'resize', 'rounded', 'mirror', 'flip', 'negative',
+        'grayscale', 'format', 'quality', 'preview', 'thumbnail'
     ];
 
-    const MODIFIER_RESIZE = '-/resize/(:width)x(:height)/';
-    const MODIFIER_ROTATE = '-/rotate/(:angle)/';
-    const MODIFIER_CROP = '-/crop/(:width)x(:height)/(:x),(:y)/';
-    const MODIFIER_MIRROR = '-/mirror/';
-    const MODIFIER_FLIP = '-/flip/';
-    const MODIFIER_ROUNDED = '-/rounded/(:radius)/';
-    const MODIFIER_NEGATIVE = '-/negative/';
-    const MODIFIER_GRAYSCALE = '-/grayscale/';
-    const MODIFIER_FORMAT = '-/format/(:format)/';
-    const MODIFIER_QUALITY = '-/quality/(:quality)/';
-    const MODIFIER_PREVIEW = '-/preview/(:width)x(:height)/(:quality)/';
-    const MODIFIER_THUMBNAIL = '-/thumbnail/(:width)x(:height)/';
+    const MODIFIERS = [
+        'resize' => '-/resize/(:width)x(:height)/',
+        'rotate' => '-/rotate/(:angle)/',
+        'crop' => '-/crop/(:width)x(:height)/(:x),(:y)/',
+        'mirror' => '-/mirror/',
+        'flip' => '-/flip/',
+        'rounded' => '-/rounded/(:radius)/',
+        'negative' => '-/negative/',
+        'grayscale' => '-/grayscale/',
+        'format' => '-/format/(:format)/',
+        'quality' => '-/quality/(:quality)/',
+        'preview' => '-/preview/(:width)x(:height)/(:quality)/',
+        'thumbnail' => '-/thumbnail/(:width)x(:height)/',
+    ];
+
+    const MODIFIER_PATTERNS = [
+        'resize' => '/^\-\/resize\/\d+x\d+\/$/',                                     // -/resize/[width]x[height]/
+        'rotate' => '/^\-\/rotate\/([1-9]|[1-8][0-9]|[12][0-9]{2}|3[0-5][0-9])\/$/', // -/rotate/[angle (1-359)]/
+        'crop' => '/^\-\/crop\/\d+x\d+\/\d+\,\d+\/$/',                               // -/crop/[width]x[height]/[x]x[y]/
+        'mirror' => '/^\-\/mirror\/$/',                                              // -/mirror/
+        'flip' => '/^\-\/flip\/$/',                                                  // -/flip/
+        'rounded' => '/^\-\/rounded\/\d+\/$/',                                       // -/rounded/[radius]/
+        'negative' => '/^\-\/negative\/$/',                                          // -/negative/
+        'grayscale' => '/^\-\/grayscale\/$/',                                        // -/grayscale/
+        'format' => '/^\-\/format\/(jpg|jpeg|png|tiff)\/$/',                         // -/format/[format (jpg,jpeg,png,tiff)]/
+        'quality' => '/^\-\/quality\/([1-9]|[1-9][0-9]|100)\/$/',                    // -/quality/[quality (1-100)]/
+        'preview' => '/^\-\/preview\/\d+x\d+\/([1-9]|[1-9][0-9]|100)\/$/',           // -/preview/[width]x[height]/[quality (1-100)]/
+        'thumbnail' => '/^\-\/thumbnail\/\d+(x\d+){0,1}\/$/',                        // -/thumbnail/[width]x[height]/
+    ];
+
 
     public static function resize(int $width, int $height)
     {
-        $modifier = self::MODIFIER_RESIZE;
+        $modifier = self::MODIFIERS['resize'];
         $params = [ 'width' => $width, 'height' => $height ];
 
         if ($width < 0 || $height < 0) {
@@ -53,7 +61,7 @@ class Modifiers
         if ($angle < 0) { $angle += ceil(abs($angle) / 360) * 360; }
         if ($angle >= 360) { $angle -= floor($angle / 360) * 360; }
 
-        $modifier = self::MODIFIER_ROTATE;
+        $modifier = self::MODIFIERS['rotate'];
         $params = [ 'angle' => $angle ];
 
         $modifier = self::setModifierParams($modifier, $params);
@@ -63,7 +71,7 @@ class Modifiers
 
     public static function crop(int $width, int $height, int $x, int $y)
     {
-        $modifier = self::MODIFIER_CROP;
+        $modifier = self::MODIFIERS['crop'];
         $params = [
             'width' => ($width > 0) ? $width : 0,
             'height' => ($height > 0) ? $height : 0,
@@ -105,18 +113,18 @@ class Modifiers
 
     public static function mirror()
     {
-        return [ 'modifier' => self::MODIFIER_MIRROR, 'params' => [] ];
+        return [ 'modifier' => self::MODIFIERS['mirror'], 'params' => [] ];
     }
 
     public static function flip()
     {
-        return [ 'modifier' => self::MODIFIER_MIRROR, 'params' => [] ];
+        return [ 'modifier' => self::MODIFIERS['flip'], 'params' => [] ];
     }
 
     public static function rounded(int $radius = 30)
     {
         if ($radius > 0) {
-            $modifier = self::MODIFIER_ROUNDED;
+            $modifier = self::MODIFIERS['rounded'];
             $params = [ 'radius' => $radius ];
 
             $modifier = self::setModifierParams($modifier, $params);
@@ -129,18 +137,18 @@ class Modifiers
 
     public static function negative()
     {
-        return [ 'modifier' => self::MODIFIER_NEGATIVE, 'params' => [] ];
+        return [ 'modifier' => self::MODIFIERS['negative'], 'params' => [] ];
     }
 
     public static function grayscale()
     {
-        return [ 'modifier' => self::MODIFIER_GRAYSCALE, 'params' => [] ];
+        return [ 'modifier' => self::MODIFIERS['grayscale'], 'params' => [] ];
     }
 
     public static function format(string $format)
     {
         if (in_array($format, self::VALID_FORMATS)) {
-            $modifier = self::MODIFIER_FORMAT;
+            $modifier = self::MODIFIERS['format'];
             $params = [ 'format' => $format ];
 
             $modifier = self::setModifierParams($modifier, $params);
@@ -154,7 +162,7 @@ class Modifiers
     public static function quality(int $quality)
     {
         if ($quality >= 0 && $quality <= 100) {
-            $modifier = self::MODIFIER_QUALITY;
+            $modifier = self::MODIFIERS['quality'];
             $params = [ 'quality' => $quality ];
 
             $modifier = self::setModifierParams($modifier, $params);
@@ -171,14 +179,12 @@ class Modifiers
             return null;
         }
 
-        return [
-            'modifier' => self::SEPARATOR . 'preview/' . $width . 'x' . $height . '/' . $quality . '/',
-            'params' => [
-                'width' => $width,
-                'height' => $height,
-                'quality' => $quality,
-            ]
-        ];
+        $modifier = self::MODIFIERS['preview'];
+        $params = [ 'width' => $width, 'height' => $height, 'quality' => $quality ];
+
+        $modifier = self::setModifierParams($modifier, $params);
+
+        return [ 'modifier' => $modifier, 'params' => $params ];
     }
 
     public static function thumbnail(int $width, int $height = null)
@@ -206,22 +212,16 @@ class Modifiers
 
     public static function listFromString(string $string)
     {
-        $modifiers = explode('-/', $string);
-
-        array_shift($modifiers);
+        $modifiers = Booklet\Uploader\Utils\StringUtils::listModifiersFromString($string);
 
         $modifiers_array = [];
         foreach ($modifiers as $modifier) {
-            $modifier_parts = explode('/', $modifier);
-            $modifier_name = array_shift($modifier_parts);
+            $modifier = ltrim($modifier, '-/')
 
-            $modifiers_array[$modifier_name] = [];
+            $modifier_params = explode('/', $modifier);
+            $modifier_name = array_shift($modifier_params);
 
-            foreach ($modifier_parts as $modifier_param) {
-                if (!empty($modifier_param) && !is_bool($modifier_param)) {
-                    $modifiers_array[$modifier_name][] = $modifier_param;
-                }
-            }
+            $modifiers_array[$modifier_name] = $modifier_params;
         }
 
         return $modifiers_array;
