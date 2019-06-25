@@ -208,7 +208,7 @@ var BookletUploader = (function($) {
         var rule = 'other';
 
         if (number === 1) {
-            return 'one';
+            rule = 'one';
         }
 
         var integer = Number.isInteger(number);
@@ -216,11 +216,11 @@ var BookletUploader = (function($) {
         var mod100 = number % 100;
 
         if (integer && ((mod10 >= 2 && mod10 <= 4) && (mod100 < 12 || mod100 > 14))) {
-            return 'few';
+            rule = 'few';
         }
 
         if (integer && ((mod10 === 0 || mod10 === 1) || (mod10 >= 5 && mod10 <= 9 || mod100 >= 12 && mod100 <= 14))) {
-            return 'many';
+            rule = 'many';
         }
 
         for (var i = 0; i < definitions.length; i++) {
