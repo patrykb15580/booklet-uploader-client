@@ -27,7 +27,7 @@ class Modifiers
 
     const MODIFIER_PATTERNS = [
         'resize' => '/^\-\/resize\/\d+x\d+\/$/',                                     // -/resize/[width]x[height]/
-        'rotate' => '/^\-\/rotate\/([1-9]|[1-8][0-9]|[12][0-9]{2}|3[0-5][0-9])\/$/', // -/rotate/[angle (1-359)]/
+        'rotate' => '/^\-\/rotate\/([1-9]|[1-9][0-9]|[12][0-9]{2}|3[0-5][0-9])\/$/', // -/rotate/[angle (1-359)]/
         'crop' => '/^\-\/crop\/\d+x\d+\/\d+\,\d+\/$/',                               // -/crop/[width]x[height]/[x]x[y]/
         'mirror' => '/^\-\/mirror\/$/',                                              // -/mirror/
         'flip' => '/^\-\/flip\/$/',                                                  // -/flip/
