@@ -982,7 +982,7 @@ var BookletUploader = (function($) {
                     result.reject();
                 });
 
-                editor.resolve(file);
+                editor.resolve(result);
             });
 
             _panel.on('click', '.bu--panel-close', function() { editor.reject(); });
