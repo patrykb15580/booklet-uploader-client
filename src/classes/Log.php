@@ -2,41 +2,29 @@
 
 class Log
 {
-    const LOGS_FILE_NAME = 'logs.txt';
-    const INFO_LOGS_FILE_NAME = 'info.txt';
-    const ERROR_LOGS_FILE_NAME = 'errors.txt';
+    const TYPES = [ 'info', 'transform', 'warning', 'danger', 'error' ];
 
-    public static function info(string $message, $description = '')
+    public static function __callStatic($type, $arguments)
     {
-        return self::writeToFile([
-            'type' => 'INFO',
-            'message' => $message,
-            'description' => $description
-        ]);
-    }
+        if (in_array($type, self::TYPES)) {
+            $message = $arguments[0];
+            $description = $arguments[1] ?? [];
+            $options = $arguments[2] ?? [];
 
-    public static function error(string $message, $description = '')
-    {
-        return self::writeToFile([
-            'type' => 'ERROR',
-            'message' => $message,
-            'description' => $description
-        ]);
+            return self::writeToFile([
+                'type' => $type,
+                'message' => $message,
+                'description' => $description,
+                'filename' => $options['filename'] ?? null,
+            ]);
+        }
+
+        return false;
     }
 
     static private function getFilename(string $type)
     {
-        $filename = self::LOGS_FILE_NAME;
-
-        if ($type == 'INFO') {
-            $filename = self::INFO_LOGS_FILE_NAME;
-        }
-
-        if ($type == 'ERROR') {
-            $filename = self::ERROR_LOGS_FILE_NAME;
-        }
-
-        return $filename;
+        return $type . '_' . date('Y-m-d') . '.txt';
     }
 
     private static function writeToFile(array $data)
@@ -47,14 +35,15 @@ class Log
             mkdir($dir, 0777, true);
         }
 
-        $filename = $dir . '/' . self::getFilename($data['type']);
+        $filename = $data['filename'] ?? self::getFilename($data['type']);
+        $file_path = $dir . '/' . $filename;
 
         $text = "=============================================================";
         $text .= "========================================================\n\n";
-        $text .= $data['type'] . " [" . date('Y-m-d H:i:s') . "]\n\n";
+        $text .= mb_strtoupper($data['type']) . " [" . date('Y-m-d H:i:s') . "]\n\n";
         $text .= $data['message'] . "\n";
         $text .= print_r($data['description'], true) . "\n";
 
-        return file_put_contents($filename, $text, FILE_APPEND);
+        return file_put_contents($file_path, $text, FILE_APPEND);
     }
 }
