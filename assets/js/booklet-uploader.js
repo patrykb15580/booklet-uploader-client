@@ -173,7 +173,7 @@ var BookletUploader = (function($) {
     var _isAspectRatioString = function(variable) {
         let reg = new RegExp(/^\d+\/\d+$/);
 
-        return (typeof variable == 'string' && reg.test(variable));
+        return (typeof variable == 'string' && reg.test(variable)) ? true : false;
     }
 
     var _aspectRatioStringToProportions = function(string) {
@@ -750,18 +750,22 @@ var BookletUploader = (function($) {
                 options.crop = [ options.crop ];
             }
 
-            var default_aspect_ratio = null;
-            var crop_sizes = [];
+            var default_crop_aspect_ratio = null;
+            var crop_aspect_ratios = {};
 
             for (var i = 0; i < options.crop.length; i++) {
-                let crop_size = options.crop[i];
+                let label = options.crop[i];
+                let proportions = null;
 
-                if (!_isAspectRatioString(crop_size)) {
-                    crop_size = null;
+                if (_isAspectRatioString(label)) {
+                    proportions = _aspectRatioStringToProportions(label);
+                } else {
+                    label = _locale('crop.free');
+                    proportions = null;
                 }
 
-                if (!_inArray(crop_size, crop_sizes)) {
-                    crop_sizes.push(crop_size);
+                if (!crop_aspect_ratios.hasOwnProperty(label)) {
+                    crop_aspect_ratios[label] = proportions;
                 }
             }
 
@@ -793,6 +797,7 @@ var BookletUploader = (function($) {
                     _error(error_message);
                 }
             };
+
             image.setSrc = function(src) {
                 image.refresh();
                 image.image.src = src;
@@ -849,7 +854,7 @@ var BookletUploader = (function($) {
 
                     cimg.onload = function() {
                         var cropper = new Cropper(cimg, {
-                            aspectRatio: _aspectRatioStringToProportions(default_aspect_ratio),
+                            aspectRatio: default_crop_aspect_ratio,
                             autoCropArea: 1,
                             dragMode: 'move',
                             restore: false,
@@ -866,19 +871,17 @@ var BookletUploader = (function($) {
                             crop: function(e) {}
                         });
 
-                        $.each(crop_sizes, function(i, crop_size) {
-                            var aspect_ratio = _aspectRatioStringToProportions(crop_size);
-                            var label = (aspect_ratio) ? crop_size : _locale('crop.free');
+                        $.each(crop_aspect_ratios, function(label, crop_aspect_ratio) {
                             var button = $(_renderElement('crop_size_button', { label: label }));
 
                             var icon_width = 24;
                             var icon_height = 24;
 
-                            if (aspect_ratio) {
-                                if (aspect_ratio > 1) {
-                                    icon_height = parseInt(icon_width / aspect_ratio);
+                            if (crop_aspect_ratio) {
+                                if (crop_aspect_ratio > 1) {
+                                    icon_height = parseInt(icon_width / crop_aspect_ratio);
                                 } else {
-                                    icon_width = parseInt(icon_height * aspect_ratio);
+                                    icon_width = parseInt(icon_height * crop_aspect_ratio);
                                 }
                             }
 
@@ -886,12 +889,12 @@ var BookletUploader = (function($) {
 
                             button.on('click', function() {
                                 ratio_selector.find('.bu--crop-size-button.active').removeClass('active');
-                                cropper.setAspectRatio(aspect_ratio);
+                                cropper.setAspectRatio(crop_aspect_ratio);
 
                                 $(this).addClass('active');
                             });
 
-                            if (crop_size == default_aspect_ratio) {
+                            if (crop_aspect_ratio == default_crop_aspect_ratio) {
                                 button.addClass('active');
                             }
 
@@ -988,7 +991,7 @@ var BookletUploader = (function($) {
             _panel.on('click', '.bu--panel-close', function() { editor.reject(); });
 
 
-            var _init = function() {
+            file.find(file_hash_id).done(function() {
                 if (!file.isImage() ) {
                     let error_message = _locale('error.is_not_image');
 
@@ -1002,24 +1005,13 @@ var BookletUploader = (function($) {
                 }
 
                 // Select default aspect ratio for cropper
-                $.each(crop_sizes, function(i, crop_size) {
-                    let image_proportions = file.image_info.original_width / file.image_info.original_height;
-                    let default_proportions = _aspectRatioStringToProportions(default_aspect_ratio) || null;
-                    let proportions = _aspectRatioStringToProportions(crop_size);
+                var image_proportions = file.image_info.original_width / file.image_info.original_height;
 
-                    if (proportions) {
-                        let def_diff = Math.abs(image_proportions - default_proportions);
-                        let diff = Math.abs(image_proportions - proportions);
-
-                        if (diff < def_diff) {
-                            default_aspect_ratio = crop_size;
-                        }
-                    } else {
-                        default_aspect_ratio = crop_size;
-
-                        return false; // break
-                    }
-                });
+                if (!_inArray(null, Object.values(crop_aspect_ratios))) {
+                    default_crop_aspect_ratio = Object.values(crop_aspect_ratios).reduce(function(a, b) {
+                        return (Math.abs(b - image_proportions) < Math.abs(a - image_proportions) ? b : a);
+                    });
+                }
 
                 if (file.hasOwnProperty('modifiers') && file.modifiers.hasOwnProperty('crop')) {
                     let dim = file.modifiers.crop[0].split('x');
@@ -1033,8 +1025,8 @@ var BookletUploader = (function($) {
                     };
                 }
 
-                if (!transformations.crop && default_aspect_ratio) {
-                    transformations.crop = { aspect_ratio: default_aspect_ratio }
+                if (!transformations.crop && default_crop_aspect_ratio) {
+                    transformations.crop = { aspect_ratio: default_crop_aspect_ratio }
                 }
 
                 if (file.hasOwnProperty('modifiers') && file.modifiers.hasOwnProperty('rotate')) {
@@ -1075,7 +1067,7 @@ var BookletUploader = (function($) {
                             }
 
                             transformations.rotate = angle || false;
-                            transformations.crop = { aspect_ratio: default_aspect_ratio };
+                            transformations.crop = { aspect_ratio: default_crop_aspect_ratio };
 
                             transformations.notify();
                         });
@@ -1120,11 +1112,6 @@ var BookletUploader = (function($) {
                         _error(error_message);
                     });
                 });
-            }
-
-
-            file.find(file_hash_id).done(function() {
-                _init();
             }).fail(function() {
                 let error_message = _locale('error.load_file');
 
