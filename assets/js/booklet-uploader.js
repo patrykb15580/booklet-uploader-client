@@ -2,6 +2,7 @@ var BookletUploader = (function($) {
     var plugin = {};
     var self = {};
 
+    var _image_mime_types = [ 'image/jpeg', 'image/png' ];
     var locale = {
         'header.uploader': 'Wybierz pliki do przesłania',
         'header.editor': 'Edycja zdjęcia',
@@ -47,156 +48,132 @@ var BookletUploader = (function($) {
         return null;
     }
 
-    var _elements = {
-        panel: '<div class="booklet-uploader bu--panel">\
-            <div class="bu--panel-container">\
-                <div class="bu--panel-header">{{header}}</div>\
-                <div class="bu--panel-body"></div>\
-                <div class="bu--panel-footer">\
-                    <div class="bu--footer-nav">\
-                        <div class="bu--footer-nav_left"><button class="bu--panel-close bu--button bu--button-outline">{{reject}}</button></div>\
-                        <div class="bu--footer-nav_center"></div>\
-                        <div class="bu--footer-nav_right"><button class="bu--panel-done bu--button bu--button-primary">{{done}}</button></div>\
-                    </div>\
-                </div>\
-            </div>\
-        </div>',
-        panel_menu: '<ul class="bu-panel__menu"></ul>',
-        panel_menu_item: '<li class="bu-panel__menu__item">{{content}}</li>',
-        uploader: '<input id="bu--files-picker" class="bu--files-picker" type="file" />\
-        <div class="bu--uploader-header">\
-            <label class="bu--button bu--button-primary bu--select-files" for="bu--files-picker">{{files_picker}}</label>\
-            {{#max_size_info}}<div class="bu--max-file-size-info">{{max_size_info}}</div>{{/max_size_info}}\
-        </div>\
-        <ul class="bu--uploads-list"></ul>\
-        <div class="bu--files-counter">{{files_counter}}</div>',
-        upload: '<li class="bu--upload upload-{{upload_id}}" data-id="{{upload_id}}">\
-            <div class="bu--upload-preview"></div>\
-            <div class="bu--upload-details">\
-                <div class="bu--file-name">{{file_name}}</div>\
-                <div class="bu--file-size">{{file_size}}</div>\
-                <div class="bu--upload-progress">\
-                    <div class="bu--progressbar"><div class="bu--progress"></div></div>\
-                    <div class="bu--upload-error"></div>\
-                </div>\
-            </div>\
-            <ul class="bu--upload-actions">\
-                <li class="bu--upload-action-button upload--cancel"><i class="fa fa-trash"></i></li>\
-            </ul>\
-        </li>',
-        editor: '<div class="bu--editor-preview"></div>',
-        effect_selector: '<div class="bu--effects"></div>',
-        effect_button: '<div class="bu--effect-button bu--effect-{{effect}}" title="{{label}}"><i class="bu--effect-icon bu--icon_{{effect}}"></i></div>',
-        cropper: '<div class="bu--cropper-widget"></div>',
-        crop_sizes: '<div class="bu--crop-sizes"></div>',
-        crop_size_button: '<div class="bu--crop-size-button" data-label="{{label}}"><i class="bu--crop-size-icon"></i></div>',
-        panel_error: '<div class="bu--panel-error">{{message}}</div>',
-        loader: '<div class="bu--loader"></div>',
-    };
+    var BKTUploaderUtils = {
+        isInt: function(variable) { return Number(variable) === variable && variable % 1 === 0 },
+        isFloat: function(variable) { return Number(variable) === variable && variable % 1 !== 0 },
+        isNumber: function(variable) { return Number(value) === value },
+        isImageContentType: function(content_type) { return this.inArray(content_type, _image_mime_types); },
+        isAspectRatioString: function(variable) {
+            let reg = new RegExp(/^\d+\/\d+$/);
 
-    var _renderElement = function(elem_name, data = {}) {
-        return Mustache.render(_elements[elem_name], data);
-    }
+            if (typeof variable == 'string' && reg.test(variable)) {
+                return true;
+            }
 
-    var $_renderElement = function(elem_name, data = {}) {
-        return $(Mustache.render(_elements[elem_name], data));
-    }
+            return false;
+        },
+        uid: function() {
+            let hex_chr = '0123456789abcdef';
+            let uid = '';
+            for (var i = 0; i < 32; i++) {
+                let a = Math.floor(Math.random() * (hex_chr.length - 1));
 
-    var _image_mime_types = [ 'image/jpeg', 'image/png' ];
+                uid += hex_chr.charAt(a);
+            }
 
-    var _isInt = function(value) { return Number(value) === value && value % 1 === 0; };
-    var _isFloat = function(value) { return Number(value) === value && value % 1 !== 0; };
-    var _isNumber = function(value) { return _isInt(value) || _isFloat(value); };
-    var _sizeToSizeString = function(bytes) {
-        var units = ['B','kB','MB','GB','TB','PB','EB','ZB','YB'];
-        var size = bytes;
-        var unit_index = 0;
+            return uid;
+        },
+        calculateProportionsFromAspectRatioString: function(aspect_ratio) {
+            if (BKTUploaderUtils.isAspectRatioString(aspect_ratio)) {
+                let a = aspect_ratio.split('/');
 
-        while (Math.abs(size) >= 1024 && unit_index < units.length) {
-            size /= 1024;
-            ++unit_index;
-        }
+                return a[0] / a[1];
+            }
 
-        return Math.round(size * 10) / 10 + ' ' + units[unit_index];
-    };
+            return false;
+        },
+        humanReadableFileSize: function(bytes) {
+            let units = ['B','kB','MB','GB','TB','PB','EB','ZB','YB'];
+            let size = bytes;
+            let unit_index = 0;
 
-    var _inArray = function(needle, haystack, strict = false) {
-        if (Array.isArray(haystack)) {
-            for (var i = 0; i < haystack.length; i++) {
-                if (strict && needle === haystack[i]) {
+            while (Math.abs(size) >= 1024 && unit_index < units.length) {
+                size /= 1024;
+                ++unit_index;
+            }
+
+            return Math.round(size * 10) / 10 + ' ' + units[unit_index];
+        },
+        inArray: function(value, array, strict = false) {
+            if (!Array.isArray(array)) {
+                console.error('Given haystack is not an array');
+
+                return false;
+            }
+
+            for (let i = 0; i < array.length; i++) {
+                if (strict && value === array[i]) {
                     return true;
-                } else if (!strict && needle == haystack[i]) {
+                }
+
+                if (!strict && value == array[i]) {
                     return true;
                 }
             }
 
             return false;
-        }
-
-        console.error('Haystack must be Array');
-
-        return false;
-    };
-
-    var _arrayEnd = function(array) {
-        if (Array.isArray(array) && array.length > 0) {
-            return array[array.length - 1];
-        }
-
-        return false;
-    }
-
-    var _clearArrayKeysByValues = function(array, values, remove_cleared_keys = false) {
-        if (!Array.isArray(array)) {
-            return array;
-        }
-
-        if (!Array.isArray(values)) {
-            values = [values];
-        }
-
-        var cleared_array = [];
-
-        for (var i = 0; i < array.length; i++) {
-            var value = array[i];
-
-            if (!_inArray(value, values)) {
-                cleared_array.push(value);
-            } else if (!remove_cleared_keys) {
-                cleared_array.push(null);
+        },
+        clearArrayKeysByValues: function(array, values, remove_cleared_keys = false) {
+            if (!Array.isArray(array)) {
+                return array;
             }
-        }
 
-        return cleared_array;
-    };
+            if (!Array.isArray(values)) {
+                values = [values];
+            }
 
-    var _isAspectRatioString = function(variable) {
-        let reg = new RegExp(/^\d+\/\d+$/);
+            let cleared_array = [];
 
-        return (typeof variable == 'string' && reg.test(variable)) ? true : false;
+            for (var i = 0; i < array.length; i++) {
+                let value = array[i];
+
+                if (!BKTUploaderUtils.inArray(value, values)) {
+                    cleared_array.push(value);
+                } else if (!remove_cleared_keys) {
+                    cleared_array.push(null);
+                }
+            }
+
+            return cleared_array;
+        },
+        removeDuplicatesFromArray: function(array) {
+            if (!Array.isArray(array)) {
+                return array;
+            }
+
+            let cleared_array = [];
+
+            for (var i = 0; i < array.length; i++) {
+                let value = array[i];
+
+                if (!BKTUploaderUtils.inArray(value, cleared_array, true)) {
+                    cleared_array.push(value);
+                }
+            }
+
+            return cleared_array;
+        },
     }
 
-    var _aspectRatioStringToProportions = function(string) {
-        if (_isAspectRatioString(string)) {
-            let v = string.split('/');
+    var _renderElement = function(elem_name, data = {}) {
+        let _elements = {
+            panel: '<div class="booklet-uploader bu--panel">\
+                <div class="bu--panel-container">\
+                    <div class="bu--panel-header">{{header}}</div>\
+                    <div class="bu--panel-body"></div>\
+                    <div class="bu--panel-footer">\
+                        <div class="bu--footer-nav">\
+                            <div class="bu--footer-nav_left"><button class="bu--panel-close bu--button bu--button-outline">{{reject}}</button></div>\
+                            <div class="bu--footer-nav_center"></div>\
+                            <div class="bu--footer-nav_right"><button class="bu--panel-done bu--button bu--button-primary">{{done}}</button></div>\
+                        </div>\
+                    </div>\
+                </div>\
+            </div>',
+        };
 
-            return v[0] / v[1];
-        }
-
-        return false;
+        return Mustache.render(_elements[elem_name], data);
     }
-
-    var _uid = function() {
-        var hex_chr = '0123456789abcdef';
-        var uid = '';
-        for (var i = 0; i < 32; i++) {
-            var a = Math.floor(Math.random() * (hex_chr.length - 1));
-
-            uid += hex_chr.charAt(a);
-        }
-
-        return uid;
-    };
 
     var _pluralize = function(word, number) {
         var definitions = [
@@ -224,7 +201,7 @@ var BookletUploader = (function($) {
         }
 
         for (var i = 0; i < definitions.length; i++) {
-            if (_inArray(word, definitions[i])) {
+            if (BKTUploaderUtils.inArray(word, definitions[i])) {
                 return definitions[i][rules_to_words_definition_index[rule]];
             }
         }
@@ -256,459 +233,481 @@ var BookletUploader = (function($) {
         return $.ajax(options);
     };
 
-    var _Upload = function(file, options) {
-        var upload = $.Deferred();
-        var _data = new FormData();
-        var options = $.extend({}, options);
+    var BKTUploaderUpload = function(file, options = {}) {
+        var id = BKTUploaderUtils.uid();
+        var def = $.Deferred();
+        var upload = {
+            id: id,
+            file: {
+                id: null,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+            },
+            done: def.done,
+            fail: def.fail,
+            always: def.always,
+            progress: def.progress,
+        };
 
-        _data.append('action', 'upload');
-        _data.append('file[hash_id]', file.attributes.hash_id);
-        _data.append('file[name]', file.attributes.name);
-        _data.append('file[size]', file.attributes.size);
-        _data.append('file[type]', file.attributes.type);
-        _data.append('file[source]', 'local');
-        _data.append(0, file.source, file.attributes.name);
+        let defaults = {
+            aspect_ratio: null,
+        }
 
-        $.each(options, function(key, value) {
-            if (Array.isArray(value)) {
-                value = value.join(',');
+        var options = $.extend(defaults, options);
+        var data = new FormData();
+
+        var request;
+
+        data.append('action', 'upload');
+
+        if (options.aspect_ratio) {
+            data.append('options[aspect_ratio]', options.aspect_ratio);
+        }
+
+        data.append('file[name]', file.name);
+        data.append('file[size]', file.size);
+        data.append('file[type]', file.type);
+        data.append('file[source]', 'local');
+        data.append(0, file, file.name);
+
+        upload.start = function() {
+            if (typeof request !== 'undefined') {
+                return;
             }
 
-            _data.append('options[' + key + ']', value);
-        });
-
-        upload.id = _uid();
-        upload.file = file;
-        upload.start = function(callback = null) {
-            upload.request = _Request('upload', _data, {
+            request = _Request('upload', data, {
                 async: true,
                 xhr: function() {
                     var xhr = $.ajaxSettings.xhr();
 
                     xhr.upload.addEventListener('progress', function(e) {
-                        var progress = (e.loaded * 100) / e.total;
-
-                        upload.notify(progress);
+                        def.notify((e.loaded * 100) / e.total);
                     });
 
                     return xhr;
                 }
-            }).done(function(response) {
-                let file_info = response.data.file;
-
-                upload.file.attributes.hash_id      = file_info.hash;
-                upload.file.attributes.name         = file_info.name;
-                upload.file.attributes.type         = file_info.type;
-                upload.file.attributes.size         = file_info.size;
-                upload.file.attributes.url          = file_info.url;
-                upload.file.attributes.original_url = file_info.original_url;
-                upload.file.attributes.is_stored    = true;
-                upload.file.attributes.modifiers    = file_info.modifiers;
-                upload.file.attributes.preview      = file_info.preview;
-
-                // upload.file.is_image = file_info.is_image;
-
-                if (typeof file_info.image_info === 'object') {
-                    upload.file.image_info = file_info.image_info;
-                }
-
-                upload.resolve(upload.file);
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                upload.reject(jqXHR, textStatus, errorThrown);
-            }).always(function() {
-                delete upload.request;
             });
 
-            if (typeof callback == 'function') {
-                callback.call(upload);
+            request.done(function(response) {
+                let file_info = response.data.file;
+                let file_data = {
+                    hash_id:      file_info.hash,
+                    name:         file_info.name,
+                    size:         file_info.size,
+                    type:         file_info.type,
+                    original_url: file_info.original_url,
+                    url:          file_info.url,
+                    is_stored:    true,
+                    modifiers:    file_info.modifiers,
+                    preview:      file_info.preview,
+                };
+
+                upload.file.id = file_data.hash;
+
+                if (typeof file_info.image_info === 'object') {
+                    file_data.image_info = file_info.image_info;
+                }
+
+                var file = new BKTUploaderFile(file_data);
+
+                def.resolve(file);
+            }).fail(function(xhr) {
+                let error_message = _locale('error.upload');
+
+                if (xhr.statusText == 'abort') {
+                    error_message = _locale('error.upload_aborted');
+                }
+
+                def.reject(error_message);
+            });
+        };
+
+        upload.stop = function() {
+            if (typeof request === 'undefined' || request.readyState == 4) {
+                return;
             }
 
-            delete upload.start;
-
-            return upload;
-        }
-        upload.stop = function(callback = null) {
-            if (upload.hasOwnProperty('request') && upload.request.readyState !== 4) {
-                upload.request.abort();
-            }
-
-            upload.reject();
-
-            if (typeof callback == 'function') {
-                callback.call(upload);
-            }
-
-            return upload;
-        }
+            request.abort();
+        };
 
         return upload;
-    };
+    }
 
-    var _File = function(attributes = {}) {
-        var _file = {}
 
-        _file.attributes = $.extend({
-            id: null,
-            hash_id: _uid(),
+
+    var BKTUploaderFile = function(attributes = {}) {
+        var file = {};
+        var attributes = $.extend({
+            hash_id: null,
             name: null,
             size: null,
             type: null,
-            is_stored: null,
             original_url: null,
             url: null,
             modifiers: null,
             preview: null,
-        }, attributes);
+            is_stored: null,
+        },  attributes);
 
-        _file.source = null;
+        var isImage = function() {
+            return BKTUploaderUtils.inArray(attributes.type, _image_mime_types);
+        };
 
-        _file.find = function(hash_id) {
-            return _Request('info', { 'hash_id': hash_id }).done(function(response) {
+        var find = function(hash_id) {
+            var request = _Request('info', { 'hash_id': hash_id });
+
+            request.done(function(response) {
                 var data = response.data;
 
-                _file.attributes.hash_id      = data.file.hash;
-                _file.attributes.name         = data.file.name;
-                _file.attributes.size         = data.file.size;
-                _file.attributes.type         = data.file.type;
-                _file.attributes.modifiers    = data.file.modifiers;
-                _file.attributes.url          = data.file.url;
-                _file.attributes.original_url = data.file.original_url;
-                _file.attributes.preview      = data.file.preview;
+                attributes.hash_id      = data.file.hash;
+                attributes.name         = data.file.name;
+                attributes.size         = data.file.size;
+                attributes.type         = data.file.type;
+                attributes.modifiers    = data.file.modifiers;
+                attributes.url          = data.file.url;
+                attributes.original_url = data.file.original_url;
+                attributes.preview      = data.file.preview;
 
                 if (typeof data.file.image_info === 'object') {
-                    _file.image_info = data.file.image_info;
+                    file.image_info = data.file.image_info;
                 }
 
                 if (typeof data.modifiers === 'object') {
-                    _file.modifiers = data.modifiers;
-                }
-            });
-        };
-
-        _file.update = function(data) {
-            return _Request('update', { hash_id: _file.attributes.hash_id, file: data }).done(function(response) {
-                var data = response.data;
-
-                _file.attributes.hash_id      = data.file.hash || _file.attributes.hash;
-                _file.attributes.name         = data.file.name || _file.attributes.name;
-                _file.attributes.size         = data.file.size || _file.attributes.size;
-                _file.attributes.type         = data.file.type || _file.attributes.type;
-                _file.attributes.modifiers    = data.file.modifiers || _file.attributes.modifiers;
-                _file.attributes.url          = data.file.url || _file.attributes.url;
-                _file.attributes.original_url = data.file.original_url || _file.attributes.original_url;
-                _file.attributes.preview      = data.file.preview || _file.attributes.preview;
-
-                if (typeof data.file.image_info === 'object') {
-                    _file.image_info = data.file.image_info;
+                    file.modifiers = data.modifiers;
                 }
 
-                if (typeof data.modifiers === 'object') {
-                    _file.modifiers = data.modifiers;
-                }
-            });
-        };
+                delete file.find;
 
-        _file.isImage = function() {
-            return _inArray(_file.attributes.type, _image_mime_types);
-        };
-
-        return _file;
-    };
-
-    plugin.init = function(api) {
-        plugin.api = api;
-
-        delete plugin.init;
-
-        plugin.upload = function(input, options = {}) {
-            var file_info = input.files[0];
-            var file = new _File({
-                name: file_info.name,
-                size: file_info.size,
-                type: file_info.type,
+                file.update = update;
             });
 
-            file.source = file_info;
-
-            var upload = new _Upload(file, options);
-            upload.start();
-
-            return upload;
+            return request;
         }
 
-        plugin.openUploader = function(options = {}) {
-            var uploader = $.Deferred();
-            var defaults = {
-                multiple: false,
-                max_files: false,
-                drag_and_drop: false,
-                images_only: false,
-                max_size: false,
-                crop: false,
-            };
+        var update = function(data) {
+            var request = _Request('update', {
+                hash_id: attributes.hash_id,
+                file: data,
+            });
 
-            var options = $.extend(defaults, options);
+            request.done(function(response) {
+                var data = response.data;
 
-            if (!options.multiple) {
-                options.max_files = 1;
-            }
+                attributes.hash_id      = data.file.hash         || attributes.hash;
+                attributes.name         = data.file.name         || attributes.name;
+                attributes.size         = data.file.size         || attributes.size;
+                attributes.type         = data.file.type         || attributes.type;
+                attributes.modifiers    = data.file.modifiers    || attributes.modifiers;
+                attributes.url          = data.file.url          || attributes.url;
+                attributes.original_url = data.file.original_url || attributes.original_url;
+                attributes.preview      = data.file.preview      || attributes.preview;
 
-            if (options.max_files && options.max_files <= 0) {
-                options.max_files = null;
-            }
+                delete file.image_info;
+                delete file.modifiers;
 
-            var _files_counter = $.Deferred();
-            var uploaded_files = {};
-            var active_uploads = {};
-            var uploads = [];
+                if (typeof data.file.image_info === 'object') {
+                    file.image_info = data.file.image_info;
+                }
 
-            var _uploadedFilesNumber = function() {
-                return Object.keys(uploaded_files).length;
-            }
+                if (typeof data.modifiers === 'object') {
+                    file.modifiers = data.modifiers;
+                }
+            });
 
-            var _activeUploadsNumber = function() {
-                return Object.keys(active_uploads).length;
-            }
+            return request;
+        };
 
-            var _isMaxFilesNumberSelected = function() {
-                var files_number_limit = options.max_files;
+        file.attributes = attributes;
+        file.isImage = isImage;
+
+        if (file.attributes.hash_id) {
+            file.update = update;
+        } else {
+            file.find = find;
+        }
+
+        return file;
+    }
+
+    var openUploader = function(options = {}) {
+        var id = BKTUploaderUtils.uid();
+        var _uploader = $.Deferred();
+        var defaults = {
+            multiple: false,
+            max_files: false,
+            drag_and_drop: false,
+            images_only: false,
+            max_size: false,
+            crop: false,
+        };
+
+        var options = $.extend(defaults, options);
+
+        var $uploader, $uploader_body, $files_picker, $files_picker_btn, $files_counter, $uploads_list, $done_btn, $close_btn;
+        var uploader = {
+            id: id,
+            done: _uploader.done,
+            fail: _uploader.fail,
+            always: _uploader.always,
+        };
+
+        var images_aspect_ratio = null;
+
+        if (Array.isArray(options.crop)) {
+            options.crop = options.crop[0];
+        }
+
+        if (BKTUploaderUtils.isAspectRatioString(options.crop)) {
+            images_aspect_ratio = BKTUploaderUtils.calculateProportionsFromAspectRatioString(options.crop);
+        }
+
+        if (typeof options.crop === 'number' && options.crop > 0) {
+            images_aspect_ratio = options.crop;
+        }
+
+        var max_files_number = parseInt(options.max_files);
+
+        if (max_files_number <= 0) {
+            max_files_number = null;
+        }
+
+        if (!options.multiple) {
+            max_files_number = 1;
+        }
+
+        var uploaded_files = {};
+        var active_uploads = {};
+        var uploads = {};
+
+        var _uploadedFilesNumber = function() {
+            return Object.keys(uploaded_files).length;
+        }
+
+        var _activeUploadsNumber = function() {
+            return Object.keys(active_uploads).length;
+        }
+
+        var _areUploadsInProgress = function() {
+            return (_activeUploadsNumber() > 0) ? true : false;
+        }
+
+        var _isMaxFilesNumberSelected = function() {
+            if (max_files_number) {
                 var uploaded_files_number = _uploadedFilesNumber();
                 var active_uploads_number = _activeUploadsNumber();
 
-                var x = uploaded_files_number + active_uploads_number;
+                var selected_files_number = uploaded_files_number + active_uploads_number;
 
-                if (files_number_limit && files_number_limit <= x) {
+                if (max_files_number <= selected_files_number) {
                     return true;
                 }
-
-                return false;
             }
 
-            var _isMaxFilesNumberUploaded = function() {
-                var files_number_limit = options.max_files;
+            return false;
+        }
 
-                if (files_number_limit && files_number_limit <= _uploadedFilesNumber()) {
-                    return true;
+        var _isMaxFilesNumberUploaded = function() {
+            if (max_files_number && max_files_number <= _uploadedFilesNumber()) {
+                return true;
+            }
+
+            return false;
+        }
+
+        var _onFilesSelect = function(files) {
+            _disableDoneButton();
+
+            $.each(files, function(i, file) {
+                if (_isMaxFilesNumberSelected()) {
+                    return false; // break
                 }
 
-                return false;
-            }
+                if (options.images_only && !BKTUploaderUtils.isImageContentType(file.type)) {
+                    return true; // continue
+                }
 
-            var _onFilesSelect = function(files) {
-                done_button.removeClass('bu--panel-done bu--button-primary').addClass('bu--button-disabled');
+                if (options.max_size && file.size > options.max_size) {
+                    return true; // continue
+                }
 
-                $.each(files, function(i, source_file) {
-                    if (_isMaxFilesNumberSelected()) {
-                        return false; // break
-                    }
+                let upload_options = {};
 
-                    var file = new _File({
-                        name: source_file.name,
-                        size: source_file.size,
-                        type: source_file.type,
+                if (images_aspect_ratio) {
+                    upload_options.aspect_ratio = images_aspect_ratio;
+                }
+
+                var upload = new BKTUploaderUpload(file, upload_options);
+
+                // Render uploads list item
+                var $upload = $('<li class="bu--upload"></li>');
+                var $upload_preview = $('<div class="bu--upload-preview"></div>');
+                var $upload_details = $('<div class="bu--upload-details"></div>');
+                var $upload_actions = $('<ul class="bu--upload-actions"></ul>');
+                var $upload_cancel_btn = $('<li class="bu--upload-action-button upload--cancel"><i class="fa fa-trash"></i></li>');
+                var $upload_progress = $('<div class="bu--upload-progress"></div>');
+                var $upload_progressbar = $('<div class="bu--progressbar"></div>');
+                var $upload_progressbar_progress = $('<div class="bu--progress"></div>');
+                var $upload_error = $('<div class="bu--upload-error"></div>');
+
+                $upload_progressbar.append($upload_progressbar_progress);
+                $upload_progress.append($upload_progressbar);
+                $upload_progress.append($upload_error);
+
+                $upload_details.append('<div class="bu--file-name">' + file.name + '</div>');
+                $upload_details.append('<div class="bu--file-size">' + BKTUploaderUtils.humanReadableFileSize(file.size) + '</div>');
+                $upload_details.append($upload_progress);
+                $upload_actions.append($upload_cancel_btn);
+
+                $upload.append($upload_preview);
+                $upload.append($upload_details);
+                $upload.append($upload_actions);
+
+                $upload.addClass('upload-' + upload.id);
+                $upload.attr('data-id', upload.id);
+
+                $uploads_list.prepend($upload);
+
+                upload.start();
+
+                active_uploads[upload.id] = upload;
+                uploads[upload.id] = upload;
+
+                upload.done(function(file) {
+                    delete file.update;
+
+                    uploaded_files[file.attributes.hash_id] = file;
+
+                    var preview = '<img src="' + file.attributes.preview + '" alt="" />';
+
+                    $upload.addClass('uploaded');
+                    $upload_preview.append('<div class="bu--loader sm"></div>');
+                    $upload_preview.append(preview);
+
+                    $(preview).on('load error', function() {
+                        $upload.find('.bu--upload-preview .bu--loader').remove();
                     });
+                }).fail(function(error_message = null) {
+                    error_message = error_message || _locale('error.upload');
 
-                    file.source = source_file;
+                    $upload_error.html(error_message);
+                }).always(function() {
+                    $upload_progressbar.hide();
 
-                    if (options.images_only && !file.isImage()) {
-                        return true; // continue
-                    }
+                    delete active_uploads[upload.id];
 
-                    if (options.max_size && file.attributes.size > options.max_size) {
-                        return true; // continue
-                    }
-
-                    let upload_options = {};
-
-                    if (options.crop && (options.crop !== null || options.crop !== false)) {
-                        upload_options.crop = options.crop;
-                    }
-
-                    var upload = new _Upload(file, upload_options);
-                    var $upload = $(_renderElement('upload', {
-                        upload_id: upload.id,
-                        file_name: file.attributes.name,
-                        file_size: _sizeToSizeString(file.attributes.size),
-                    }));
-
-                    upload.element = $upload;
-
-                    $upload.find('.bu--progressbar').hide();
-
-                    upload.start(function() {
-                        _panel.find('.bu--uploads-list').append($upload);
-
-                        $upload.find('.bu--progressbar').show();
-
-                        active_uploads[this.id] = this;
-                        uploads.push(this);
-                    });
-
-                    upload.done(function(file) {
-                        delete file.source;
-                        delete file.update;
-                        delete file.find;
-
-                        var preview = '<img src="' + file.attributes.preview + '" alt="" />';
-                        var $preview_wrapper = $upload.find('.bu--upload-preview');
-
-                        uploaded_files[file.attributes.hash_id] = file;
-
-                        $upload.addClass('uploaded');
-                        $preview_wrapper.append('<div class="bu--loader sm"></div>');
-                        $preview_wrapper.append(preview);
-
-                        $(preview).on('load error', function() {
-                            $upload.find('.bu--upload-preview .bu--loader').remove();
-                        });
-                    }).fail(function() {
-                        // code...
-                    }).always(function() {
-                        $upload.find('.bu--progressbar').hide();
-                    }).always(function() {
-                        delete active_uploads[upload.id];
-
-                        _files_counter.notify();
-                    }).progress(function(progress) {
-                        $upload.find('.bu--progress').css({ 'width': progress + '%' });
-                    });
-
-                    $upload.on('click', '.bu--upload-action-button.upload--cancel', function() {
-                        upload.stop(function() {
-                            let f = this.file;
-
-                            if (uploaded_files.hasOwnProperty(f.attributes.hash_id)) {
-                                delete uploaded_files[f.attributes.hash_id];
-
-                                _files_counter.notify();
-                            }
-                        });
-
-                        $upload.fadeOut(300, function() { $(this).remove(); });
-                    });
+                    _uploader.notify();
+                }).progress(function(progress) {
+                    $upload_progressbar_progress.css({ 'width': progress + '%' });
                 });
+            });
+        }
 
-                $.when.apply($, uploads).always(function() {
-                    done_button.removeClass('bu--button-disabled').addClass('bu--panel-done bu--button-primary');
-                });
-            };
+        var _closeUploader = function() {
+            $uploader.fadeOut(200, function() { $uploader.remove(); });
+        }
 
+        var _enableDoneButton = function() {
+            $done_btn.addClass('bu--button-primary');
+            $done_btn.addClass('bu--panel-done');
+            $done_btn.removeClass('bu--button-disabled');
+        }
 
-            /*
-             *  Build panel
-             */
+        var _disableDoneButton = function() {
+            $done_btn.removeClass('bu--button-primary');
+            $done_btn.removeClass('bu--panel-done');
+            $done_btn.addClass('bu--button-disabled');
+        }
 
-            var _panel_id = _uid();
-            var _panel = $(_renderElement('panel', {
+        var _renderEditor = function() {
+            let panel = _renderElement('panel', {
                 header: _locale('header.uploader'),
                 done: _locale('done.upload'),
                 reject: _locale('reject'),
-            }));
+            });
 
-            var done_button = _panel.find('.bu--panel-done');
+            let $uploader_content_header = $('<div class="bu--uploader-header"></div>');
 
-            var _d = {
-                files_picker: _locale('picker.single'),
-                files_counter: _locale('counter', { files_number: _uploadedFilesNumber(), file: _pluralize('plik', _uploadedFilesNumber()) }),
-            };
+            $uploader = $(panel);
+            $uploader_body = $uploader.find('.bu--panel-body');
+
+            $files_picker = $('<input id="bu--files-picker" class="bu--files-picker" type="file" />');
+
+            $files_picker_btn = $('<label class="bu--button bu--button-primary bu--select-files" for="bu--files-picker"></label>');
+            $files_picker_btn.html(_locale('picker.single'));
 
             if (options.multiple) {
-                _d.files_picker = _locale('picker.multiple');
+                $files_picker_btn.html(_locale('picker.multiple'));
             }
+
+            $files_counter = $('<div class="bu--files-counter"></div>');
+            $uploads_list = $('<ul class="bu--uploads-list"></ul>');
+
+            $done_btn = $uploader.find('.bu--panel-done');
+            $close_btn = $uploader.find('.bu--panel-close');
+
+            let valid_mime_types = '*';
+
+            if (options.images_only) {
+                valid_mime_types = _image_mime_types.join(',');
+            }
+
+            $files_picker.attr({accept: valid_mime_types, multiple: options.multiple});
+            $files_picker.hide();
+
+            $uploader_body.append($files_picker);
+            $uploader_body.append($uploader_content_header);
+            $uploader_body.append($uploads_list);
+            $uploader_body.append($files_counter);
+
+            $uploader_content_header.append($files_picker_btn);
 
             if (options.max_size) {
-                _d.max_size_info = _locale('picker.max_file_size', { max_size: _sizeToSizeString(options.max_size) });
+                let $max_file_size_info = $('<div class="bu--max-file-size-info"></div>');
+                let text = _locale('picker.max_file_size', { max_size: BKTUploaderUtils.humanReadableFileSize(options.max_size) });
+
+                $max_file_size_info.html(text);
+
+                $uploader_content_header.append($max_file_size_info);
             }
 
-            if (options.max_files) {
-                _d.files_counter = _locale('counter.limited', { files_number: _uploadedFilesNumber(), max_files_number: options.max_files, file: _pluralize('plik', options.max_files) });
-            }
+            _uploader.notify();
 
-            _panel.find('.bu--panel-body').append(_renderElement('uploader', _d));
-            _panel.addClass('bu--panel-uploader bu--panel-small');
-            _panel.attr({ id: 'bu--panel_' + _panel_id });
-            _panel.hide();
+            $uploader.addClass('btk-uploader bkt-uploader--' + uploader.id);
+            $uploader.addClass('bu--panel-uploader bu--panel-small');
+            $uploader.hide();
+            $uploader.appendTo('body').fadeIn(200);
+        }
 
-            _panel.find('.bu--files-picker').attr({
-                accept: (options.images_only) ? _image_mime_types.join(',') : '*',
-                multiple: options.multiple,
-            }).hide();
+        var _bindEvents = function() {
+            $(window).resize(function() { $uploader.css({ height: window.innerHeight }); });
+            $(window).trigger('resize');
 
-
-            /*
-             *  Bind events
-             */
-
-            $(window).resize(function() { _panel.css({ height: window.innerHeight }); });
-
-            _files_counter.progress(function() {
-                var $counter = _panel.find('.bu--files-counter');
-                var uploaded_files_number = _uploadedFilesNumber();
-
-                var text = _locale('counter', {
-                    files_number: uploaded_files_number,
-                    file: _pluralize('plik', uploaded_files_number)
-                });
-
-                if (options.max_files) {
-                    text = _locale('counter.limited', {
-                        files_number: _uploadedFilesNumber(),
-                        max_files_number: options.max_files,
-                        file: _pluralize('plik', options.max_files)
-                    });
-                };
-
-                $counter.html(text);
-
-                if (_isMaxFilesNumberUploaded()) {
-                    $counter.css('color', '#53be31');
-                } else {
-                    $counter.removeAttr('style');
-                }
-            });
-
-            _panel.on('click', '.bu--panel-done', function() {
-                // Prevent close uploader before all uploads are done
-                if (Object.keys(active_uploads).length) {
-                    // Highlight uploads in progress
-                    $.each(active_uploads, function(id, upl) {
-                        upl.element.css('background-color', '#fce9e9');
-                        upl.always(function() { upl.element.css('background-color', ''); });
-                    });
-                } else {
-                    uploader.resolve(Object.values(uploaded_files));
-                }
-            });
-            _panel.on('click', '.bu--panel-close', function() { uploader.reject(); });
-
-            _panel.on('click', '.bu--files-picker', function(e) {
+            $files_picker.on('change', function(e) { _onFilesSelect(this.files); });
+            $files_picker.on('click', function(e) {
                 if (_isMaxFilesNumberSelected()) {
                     e.preventDefault();
                     e.stopPropagation();
                 }
             });
 
-            _panel.on('change', '.bu--files-picker', function(e) {
-                _onFilesSelect(this.files);
-            });
-
-            _panel.on('dragover dragleave drop', function(e) {
+            $uploader.on('dragover dragleave drop', function(e) {
                  e.preventDefault();
                  e.stopPropagation();
             });
 
             if (options.drag_and_drop) {
-                _panel.on({
+                $uploader.on({
                     dragover: function(e) {
                         if (!_isMaxFilesNumberSelected()) {
-                            _panel.addClass('bu--dragin');
+                            $uploader.addClass('bu--dragin');
                         }
                     },
                     dragleave: function(e) {
-                        _panel.removeClass('bu--dragin');
+                        $uploader.removeClass('bu--dragin');
                     },
                     drop: function(e) {
-                        _panel.removeClass('bu--dragin');
+                        $uploader.removeClass('bu--dragin');
 
                         if (!_isMaxFilesNumberSelected()) {
                             _onFilesSelect(e.originalEvent.dataTransfer.files);
@@ -717,421 +716,467 @@ var BookletUploader = (function($) {
                 });
             }
 
+            _uploader.progress(function() {
+                let uploaded_files_number = _uploadedFilesNumber();
+                let text = _locale('counter', {
+                    files_number: uploaded_files_number,
+                    file: _pluralize('plik', uploaded_files_number)
+                });
 
-            // Show uploader
-            _panel.appendTo('body').fadeIn(200);
+                if (max_files_number) {
+                    text = _locale('counter.limited', {
+                        files_number: uploaded_files_number,
+                        max_files_number: max_files_number,
+                        file: _pluralize('plik', max_files_number)
+                    });
+                };
 
-            uploader.done(function() {
-                // code...
-            }).fail(function() {
-                for (var upload_id in active_uploads) {
+                $files_counter.html(text);
+
+                if (_isMaxFilesNumberUploaded()) {
+                    $files_counter.css('color', '#53be31');
+                } else {
+                    $files_counter.removeAttr('style');
+                }
+
+                if (!_areUploadsInProgress()) {
+                    _enableDoneButton();
+                }
+            });
+
+            $uploader.on('click', '.bu--panel-close', _uploader.reject);
+            $uploader.on('click', '.bu--panel-done', function() {
+                if (_areUploadsInProgress()) {
+                    _disableDoneButton();
+
+                    $.each(active_uploads, function(id, upload) {
+                        var $upload = $uploads_list.find('.upload-' + id);
+
+                        $upload.css('background-color', '#FBFFE4');
+                        upload.always(function() {
+                            $upload.css('background-color', '');
+                        });
+                    });
+                } else {
+                    var files = Object.values(uploaded_files);
+
+                    _uploader.resolve(files);
+                }
+            });
+
+            uploader.always(_closeUploader);
+            uploader.fail(function() {
+                for (let upload_id in active_uploads) {
                     if (active_uploads.hasOwnProperty(upload_id)) {
                         active_uploads[upload_id].stop();
                     }
                 }
-            }).always(function() {
-                _panel.fadeOut(200, function() { _panel.remove(); });
             });
 
-            return uploader;
+            $uploads_list.on('click', '.bu--upload .bu--upload-action-button.upload--cancel', function() {
+                var $upload = $(this).closest('.bu--upload');
+                var upload_id = $upload.data('id');
+
+                var upload = uploads[upload_id];
+
+                upload.stop();
+
+                delete uploads[upload.id];
+                delete uploaded_files[upload.file.id];
+
+                $upload.fadeOut(200, function() { $upload.remove(); });
+                _uploader.notify();
+            });
         }
 
-        plugin.openEditor = function(file_hash_id, options) {
-            var editor = $.Deferred();
-            var file = new _File();
+        _renderEditor();
+        _bindEvents();
 
-            var defaults = {
-                effects: ['crop', 'rotate'],
-                crop: false,
-            };
-            var options = $.extend(defaults, options);
+        return uploader;
+    };
 
-            if (!options.crop || !Array.isArray(options.crop)) {
+    var openEditor = function(file_hash_id, options) {
+        var editor = $.Deferred();
+        var file = new BKTUploaderFile();
+        var image = new Image();
+        var $image = $(image);
+        var cropper;
+
+        var $editor, $editor_body, $editor_content, $editor_actions, $aspect_ratio_selector, $done_btn, $close_btn, $loader;
+
+        var defaults = {
+            effects: ['crop', 'rotate'],
+            crop: null,
+        };
+
+        var options = $.extend(defaults, options);
+
+        const AVAILABLE_EFFECTS = ['crop', 'rotate'];
+
+        var angle = 0;
+
+        var aspect_ratios = [];
+        var effects = [];
+
+        var _init = function() {
+            // Get effects list
+            if (!Array.isArray(options.effects)) {
+                options.effects = [ options.effects ];
+            }
+
+            if (options.effects.length == 0) {
+                throw 'No effect selected';
+            }
+
+            for (var i = 0; i < options.effects.length; i++) {
+                let effect = options.effects[i];
+
+                if (BKTUploaderUtils.inArray(effect, AVAILABLE_EFFECTS)) {
+                    effects.push(effect);
+                }
+            }
+
+            effects = BKTUploaderUtils.removeDuplicatesFromArray(effects);
+
+            // Get aspect ratios list
+            if (!Array.isArray(options.crop)) {
                 options.crop = [ options.crop ];
             }
 
-            var default_crop_aspect_ratio = null;
-            var crop_aspect_ratios = {};
-
             for (var i = 0; i < options.crop.length; i++) {
-                let label = options.crop[i];
-                let proportions = null;
+                let aspect_ratio = options.crop[i];
 
-                if (_isAspectRatioString(label)) {
-                    proportions = _aspectRatioStringToProportions(label);
-                } else {
-                    label = _locale('crop.free');
-                    proportions = null;
+                if (!BKTUploaderUtils.isAspectRatioString(aspect_ratio)) {
+                    aspect_ratio = null;
                 }
 
-                if (!crop_aspect_ratios.hasOwnProperty(label)) {
-                    crop_aspect_ratios[label] = proportions;
-                }
+                aspect_ratios.push(aspect_ratio);
             }
 
-            var $loader = $(_renderElement('loader')).addClass('bu--loader-size-lg');
+            aspect_ratios = BKTUploaderUtils.removeDuplicatesFromArray(aspect_ratios);
+        }
 
-            var $preview = null;
-            var $effects_selector = null;
-
-            var image = {};
-            image.image = new Image();
-            image.image.alt = '';
-            image.$ = $(image.image).addClass('bu--preview-image');
-            image.refresh = function() {
-                let $preview = _panel.find('.bu--editor-preview');
-
-                $preview.append($loader);
-                image.$.detach();
-
-                image.image.onload = function() {
-                    $loader.detach();
-                    $preview.append(image.$);
-                }
-
-                image.image.onerror = function() {
-                    let error_message = _locale('errors.load_file');
-
-                    $loader.detach();
-
-                    _error(error_message);
-                }
-            };
-
-            image.setSrc = function(src) {
-                image.refresh();
-                image.image.src = src;
-            };
-
-            var modifiers = '';
-            var transformations = $.extend($.Deferred(), {
-                rotate: false,
-                crop: false,
-                mirror: false,
-                flip: false,
-                grayscale: false
-            });
-
-            var _Cropper = function() {
-                var def = $.Deferred();
-
-                var cimg = new Image;
-                var $cimg = $(cimg);
-
-                var widget = $(_renderElement('cropper'));
-                var ratio_selector = $(_renderElement('crop_sizes'));
-
-                widget.append($cimg);
-
-                _panel.find('.bu--footer-nav_center').append(ratio_selector);
-                _panel.find('.bu--panel-body').append(widget);
-
-                $preview.detach();
-                $effects_selector.detach();
-
-                done_button.removeClass('bu--panel-done').addClass('bu--cropper-done').html(_locale('done.apply'));
-                close_button.removeClass('bu--panel-close').addClass('bu--cropper-cancel');
-
-                var data = {
-                    image: {
-                        hash_id: file.attributes.hash_id,
-                        filename: file.attributes.name,
-                        size: file.attributes.size,
-                        mime: file.attributes.type,
-                        width: file.image_info.original_width,
-                        height: file.image_info.original_height,
-                    },
-                    transformations: {
-                        rotate: transformations.rotate,
-                        mirror: transformations.mirror,
-                        flip: transformations.flip,
-                        grayscale: transformations.grayscale,
-                    }
-                };
-
-                _Request('transform', data).done(function(response) {
-                    var modifiers = response.data.modifiers;
-
-                    cimg.onload = function() {
-                        var cropper = new Cropper(cimg, {
-                            aspectRatio: default_crop_aspect_ratio,
-                            autoCropArea: 1,
-                            dragMode: 'move',
-                            restore: false,
-                            viewMode: 1,
-                            movable: false,
-                            rotatable: false,
-                            scalable: false,
-                            zoomable: false,
-                            zoomOnTouch: false,
-                            zoomOnWheel: false,
-                            toggleDragModeOnDblclick: false,
-                            responsive: true,
-                            ready: function() {},
-                            crop: function(e) {}
-                        });
-
-                        $.each(crop_aspect_ratios, function(label, crop_aspect_ratio) {
-                            var button = $(_renderElement('crop_size_button', { label: label }));
-
-                            var icon_width = 24;
-                            var icon_height = 24;
-
-                            if (crop_aspect_ratio) {
-                                if (crop_aspect_ratio > 1) {
-                                    icon_height = parseInt(icon_width / crop_aspect_ratio);
-                                } else {
-                                    icon_width = parseInt(icon_height * crop_aspect_ratio);
-                                }
-                            }
-
-                            var icon = button.find('.bu--crop-size-icon').css({ width: icon_width + 'px', height: icon_height + 'px' });
-
-                            button.on('click', function() {
-                                ratio_selector.find('.bu--crop-size-button.active').removeClass('active');
-                                cropper.setAspectRatio(crop_aspect_ratio);
-
-                                $(this).addClass('active');
-                            });
-
-                            if (crop_aspect_ratio == default_crop_aspect_ratio) {
-                                button.addClass('active');
-                            }
-
-                            ratio_selector.append(button);
-                        });
-
-                        _panel.on('click', '.bu--cropper-done', function() {
-                            def.resolve(cropper.getData());
-                        });
-
-                        _panel.on('click', '.bu--cropper-cancel', function() {
-                            def.reject();
-                        });
-                    }
-
-                    cimg.onerror = function() {
-                        _error(_locale('errors.load_file'));
-                    }
-
-                    cimg.src = file.attributes.original_url + modifiers;
-                }).fail(function() {
-                    _error(_locale('errors.load_file'));
-                });
-
-                def.done(function(data) {
-                    transformations.crop = {
-                        width: data.width,
-                        height: data.height,
-                        x: data.x,
-                        y: data.y,
-                    };
-
-                    transformations.notify();
-                }).fail(function() {
-                    // code...
-                }).always(function() {
-                    _panel.find('.bu--panel-body').append($preview);
-                    _panel.find('.bu--footer-nav_center').append($effects_selector);
-                    done_button.removeClass('bu--cropper-done').addClass('bu--panel-done').html(_locale('done.save'));
-                    close_button.removeClass('bu--cropper-cancel').addClass('bu--panel-close');
-
-                    widget.remove();
-                    ratio_selector.remove();
-                });
-            }
-
-            var _error = function(error_message) {
-                let error = _renderElement('panel_error', { message: error_message });
-
-                _panel.find('.bu--panel-body').empty().html(error);
-                _panel.find('.bu--footer-nav_center').empty();
-
-                done_button.removeClass('bu--button-primary');
-                done_button.removeClass('bu--panel-done');
-                done_button.addClass('bu--button-disabled');
-            }
-
-
-            /*
-             *  Build panel
-             */
-
-            var _panel_id = _uid();
-            var _panel = $(_renderElement('panel', {
+        var _renderEditor = function() {
+            let panel = _renderElement('panel', {
                 header: _locale('header.editor'),
                 done: _locale('done.save'),
                 reject: _locale('reject'),
-            }));
-
-            var done_button = _panel.find('.bu--panel-done');
-            var close_button = _panel.find('.bu--panel-close');
-
-            _panel.hide().addClass('bu--panel-editor');
-
-
-            /*
-             *  Bind events
-             */
-
-            $(window).resize(function() { _panel.css({ height: window.innerHeight }); });
-
-            _panel.on('click', '.bu--panel-done', function() {
-                var result = $.Deferred();
-
-                file.update({ modifiers: modifiers }).done(function() {
-                    result.resolve(file);
-                }).fail(function() {
-                    result.reject();
-                });
-
-                editor.resolve(result);
             });
 
-            _panel.on('click', '.bu--panel-close', function() { editor.reject(); });
+            $editor = $(panel);
+            $editor_body = $editor.find('.bu--panel-body');
+            $editor_content = $('<div class="bu--editor-preview"></div>');
+            $editor_actions = $('<div class="bkt-editor__actions"></div>');
+            $aspect_ratio_selector = $('<div class="bkt-editor__actions-group bkt-editor__actions-group--aspect-ratio-selector"></div>');
+            $done_btn = $editor.find('.bu--panel-done');
+            $close_btn = $editor.find('.bu--panel-close');
+            $loader = $('<div class="bu--loader"></div>');
 
+            $editor_actions.append($aspect_ratio_selector);
 
-            file.find(file_hash_id).done(function() {
-                if (!file.isImage() ) {
-                    let error_message = _locale('error.is_not_image');
+            $.each(aspect_ratios, function(i, aspect_ratio) {
+                let label = aspect_ratio;
 
-                    return _error(error_message);
+                if (!BKTUploaderUtils.isAspectRatioString(aspect_ratio)) {
+                    aspect_ratio = 'free';
+                    label = _locale('crop.free');
                 }
 
-                if (!file.hasOwnProperty('image_info')) {
-                    let error_message = _locale('error.load_file');
+                let $btn = $('<div></div>');
+                    $btn.addClass('bkt-editor__action');
+                    $btn.addClass('bkt-editor__action--change-aspect-ratio');
+                    $btn.attr('data-aspect-ratio', aspect_ratio);
+                    $btn.attr('data-label', label);
 
-                    return _error(error_message);
-                }
+                let $icon = $('<i class="bkt-editor__aspect-ratio-icon"></i>')
 
-                // Select default aspect ratio for cropper
-                var image_proportions = file.image_info.original_width / file.image_info.original_height;
+                let icon_width = 24;
+                let icon_height = 24;
+                let proportions = BKTUploaderUtils.calculateProportionsFromAspectRatioString(aspect_ratio);
 
-                if (!_inArray(null, Object.values(crop_aspect_ratios))) {
-                    default_crop_aspect_ratio = Object.values(crop_aspect_ratios).reduce(function(a, b) {
-                        return (Math.abs(b - image_proportions) < Math.abs(a - image_proportions) ? b : a);
-                    });
-                }
-
-                if (file.hasOwnProperty('modifiers') && file.modifiers.hasOwnProperty('crop')) {
-                    let dim = file.modifiers.crop[0].split('x');
-                    let pos = file.modifiers.crop[1].split(',');
-
-                    transformations.crop = {
-                        width: parseInt(dim[0]),
-                        height: parseInt(dim[1]),
-                        x: parseInt(pos[0]),
-                        y: parseInt(pos[1])
-                    };
-                }
-
-                if (!transformations.crop && default_crop_aspect_ratio) {
-                    transformations.crop = { aspect_ratio: default_crop_aspect_ratio }
-                }
-
-                if (file.hasOwnProperty('modifiers') && file.modifiers.hasOwnProperty('rotate')) {
-                    transformations.rotate = parseInt(file.modifiers.rotate[0]);
-                }
-
-
-                /*
-                 *  Render editor
-                 */
-
-                $preview = $(_renderElement('editor'));
-                $effects_selector = $(_renderElement('effect_selector'));
-
-                _panel.find('.bu--panel-body').append($preview);
-                _panel.find('.bu--footer-nav_center').append($effects_selector);
-
-                if (Array.isArray(options.effects) && options.effects.length > 0) {
-                    if (_inArray('crop', options.effects)) {
-                        var label = _locale('effect.crop');
-                        var effect_button = $(_renderElement('effect_button', { effect: 'crop', label: label }));
-
-                        effect_button.on('click', _Cropper);
-
-                        $effects_selector.append(effect_button);
-                    }
-
-                    if (_inArray('rotate', options.effects)) {
-                        var label = _locale('effect.rotate');
-                        var effect_button = $(_renderElement('effect_button', { effect: 'rotate', label: label }));
-
-                        effect_button.on('click', function() {
-                            var current_angle = transformations.rotate || 0;
-                            var angle = Math.abs(current_angle) + 90;
-
-                            if (angle >= 360) {
-                                angle -= Math.floor(angle / 360) * 360;
-                            }
-
-                            transformations.rotate = angle || false;
-                            transformations.crop = { aspect_ratio: default_crop_aspect_ratio };
-
-                            transformations.notify();
-                        });
-
-                        $effects_selector.append(effect_button);
+                if (proportions) {
+                    if (proportions > 1) {
+                        icon_height = parseInt(icon_width / proportions);
+                    } else {
+                        icon_width = parseInt(icon_height * proportions);
                     }
                 }
 
-                transformations.notify();
+                $icon.css({ width: icon_width + 'px', height: icon_height + 'px' });
+                $btn.append($icon);
 
+                if (aspect_ratio == aspect_ratios[0]) {
+                    $btn.addClass('bkt-editor__action--active');
+                }
 
-                /*
-                 *  Bind events
-                 */
-
-                transformations.progress(function() {
-                    var data = {
-                        image: {
-                            hash_id: file.attributes.hash_id,
-                            filename: file.attributes.name,
-                            size: file.attributes.size,
-                            mime: file.attributes.type,
-                            width: file.image_info.original_width,
-                            height: file.image_info.original_height,
-                        },
-                        transformations: {
-                            rotate: transformations.rotate,
-                            crop: transformations.crop,
-                            mirror: transformations.mirror,
-                            flip: transformations.flip,
-                            grayscale: transformations.grayscale,
-                        }
-                    };
-
-                    _Request('transform', data).done(function(response) {
-                        modifiers = response.data.modifiers;
-
-                        image.setSrc(file.attributes.original_url + modifiers);
-                    }).fail(function() {
-                        let error_message = _locale('errors.load_file');
-
-                        _error(error_message);
-                    });
-                });
-            }).fail(function() {
-                let error_message = _locale('error.load_file');
-
-                return _error(error_message);
+                $aspect_ratio_selector.append($btn);
             });
 
+            if (BKTUploaderUtils.inArray('rotate', effects)) {
+                let $rotate_left_action = $('<div class="bkt-editor__action"></div>');
+                    $rotate_left_action.addClass('bkt-editor__action--rotate-left');
+                    $rotate_left_action.append('<i class="bkt-editor__icon bkt-editor__icon--rotate-left"></i>');
 
-            // Show editor
-            _panel.appendTo('body').fadeIn(200);
+                let $rotate_right_action = $('<div class="bkt-editor__action"></div>');
+                    $rotate_right_action.addClass('bkt-editor__action--rotate-right');
+                    $rotate_right_action.append('<i class="bkt-editor__icon bkt-editor__icon--rotate-right"></i>');
 
-            editor.done(function() {
-                // code...
-            }).fail(function() {
-                // code...
-            }).always(function() {
-                _panel.fadeOut(200, function() { _panel.remove(); });
-            });
+                $editor_actions.prepend($rotate_left_action);
+                $editor_actions.append($rotate_right_action);
+            }
 
-            return editor;
+            $editor_body.append($editor_content);
+            $editor_content.append($loader);
+            $editor.find('.bu--footer-nav_center').append($editor_actions);
+
+            $editor.addClass('bu--panel-editor').hide();
+            $editor.appendTo('body').fadeIn(200);
+            $loader.addClass('bu--loader-size-lg');
         }
+
+        var _rotateLeft = function() {
+            angle -= 90;
+
+            if (angle < 0) {
+                angle += 360;
+            }
+
+            _rotate();
+        }
+
+        var _rotateRight = function() {
+            angle += 90;
+
+            if (angle >= 360) {
+                angle -= 360;
+            }
+
+            _rotate();
+        }
+
+        var _rotate = function() {
+            let url = _imageUrl();
+
+            $image.css('opacity', 0);
+            $editor_content.append($loader);
+
+            cropper.replace(url);
+        }
+
+        var _bindEvents = function() {
+            $(window).resize(function() {
+                $editor.css({ height: window.innerHeight });
+                $editor_content.css({ height: $editor_body.height() });
+                $image.css({
+                    'max-width': $editor_content.width(),
+                    'max-height': $editor_content.height(),
+                })
+            });
+            $(window).trigger('resize');
+
+            $editor.on('BKTEditorReady', function(e) {
+                $editor.off('BKTEditorReady');
+                $editor.on('click', '.bu--panel-done', function() {
+                    let result = $.Deferred();
+                    let data = cropper.getData();
+                    let image_data = cropper.getImageData();
+                    let original_width = file.image_info.original_width;
+                    let original_height = file.image_info.original_height;
+
+                    if (angle == 90 || angle == 270) {
+                        original_width = file.image_info.original_height;
+                        original_height = file.image_info.original_width;
+                    }
+
+                    let scale = image_data.naturalWidth / original_width;
+
+                    let width = Math.round(data.width / scale);
+                    let height = Math.round(data.height / scale);
+                    let x = Math.round(data.x / scale);
+                    let y = Math.round(data.y / scale);
+                    let m = '';
+
+                    if (angle > 0) {
+                        m += '-/rotate/' + angle + '/';
+                    }
+
+                    m += '-/crop/' + width + 'x' + height + '/' + x + ',' + y + '/';
+
+                    file.update({ modifiers: m }).done(function() {
+                        result.resolve(file);
+                    }).fail(function() {
+                        result.reject();
+                    });
+
+                    editor.resolve(result);
+                });
+
+                $editor_actions.on('click', '.bkt-editor__action.bkt-editor__action--rotate-left', _rotateLeft);
+                $editor_actions.on('click', '.bkt-editor__action.bkt-editor__action--rotate-right', _rotateRight);
+                $editor_actions.on('click', '.bkt-editor__action.bkt-editor__action--change-aspect-ratio', function() {
+                    let $active_btn = $editor_actions.find('.bkt-editor__action.bkt-editor__action--change-aspect-ratio.bkt-editor__action--active');
+                    let $btn = $(this);
+                    let aspect_ratio = $btn.data('aspect-ratio');
+                    let proportions = BKTUploaderUtils.calculateProportionsFromAspectRatioString(aspect_ratio);
+
+                    $active_btn.removeClass('bkt-editor__action--active');
+                    $btn.addClass('bkt-editor__action--active');
+
+                    cropper.setAspectRatio(proportions);
+                });
+
+                _enableDoneButton();
+            });
+
+            $editor.on('BKTEditorCropperReady', function() {
+                $image.css('opacity', 1);
+                $loader.detach();
+            });
+
+            $editor.on('BKTEditorError', function(e, message) {
+                let $error = $('<div class="bu--panel-error"></div>');
+
+                $error.html(message);
+
+                $editor_body.empty();
+                $editor_body.html($error);
+                $editor.find('.bu--footer-nav_center').empty();
+
+                _disableDoneButton();
+            });
+
+            $editor.on('click', '.bu--panel-close', function() {
+                editor.reject();
+            });
+
+            editor.always(_closeEditor);
+        }
+
+        var _enableDoneButton = function() {
+            $done_btn.addClass('bu--button-primary');
+            $done_btn.addClass('bu--panel-done');
+            $done_btn.removeClass('bu--button-disabled');
+        }
+
+        var _disableDoneButton = function() {
+            $done_btn.removeClass('bu--button-primary');
+            $done_btn.removeClass('bu--panel-done');
+            $done_btn.addClass('bu--button-disabled');
+        }
+
+        var _loadFile = function(success, error) {
+            file.find(file_hash_id).done(success).fail(error);
+        }
+
+        var _loadPreview = function(success, error) {
+            image.onload = function() {
+                $editor_content.append($image);
+                $loader.detach();
+
+                success.call();
+            }
+
+            image.onerror = function() {
+                success.call();
+            }
+
+            image.src = _imageUrl();
+        }
+
+        var _openCropper = function(success) {
+            cropper = new Cropper(image, {
+                aspectRatio: BKTUploaderUtils.calculateProportionsFromAspectRatioString(aspect_ratios[0]),
+                background: false,
+                autoCropArea: 1,
+                dragMode: 'move',
+                restore: false,
+                viewMode: 1,
+                movable: false,
+                rotatable: true,
+                scalable: false,
+                zoomable: false,
+                zoomOnTouch: false,
+                zoomOnWheel: false,
+                toggleDragModeOnDblclick: false,
+                responsive: true,
+                ready: function() {
+                    $editor.trigger('BKTEditorCropperReady');
+                    success.call();
+                },
+                crop: function(e) {},
+            });
+        }
+
+        var _closeEditor = function() {
+            $editor.fadeOut(200, function() { $editor.remove(); });
+        }
+
+        var _imageUrl = function() {
+            let url  = file.attributes.original_url;
+            let width = parseInt($editor_content.width());
+            let height = parseInt($editor_content.height());
+            let quality = 75;
+
+            url += '-/preview/' + width + 'x' + height + '/' + quality + '/';
+
+            if (angle > 0) {
+                url += '-/rotate/' + angle + '/';
+            }
+
+            return url;
+        }
+
+        _init();
+        _renderEditor();
+        _disableDoneButton();
+        _bindEvents();
+        _loadFile(function() {
+            if (file.isImage()) {
+                $image.css('opacity', 0);
+
+                _loadPreview(function() {
+                    $editor_content.append($loader);
+
+                    _openCropper(function() {
+                        $editor.trigger('BKTEditorReady');
+                    });
+                }, function() {
+                    $editor.trigger('BKTEditorError', [_locale('errors.load_file')]);
+                });
+            } else {
+                $editor.trigger('BKTEditorError', [_locale('error.is_not_image')]);
+            }
+        }, function() {
+            $editor.trigger('BKTEditorError', [_locale('error.load_file')]);
+        });
+
+        return editor;
+    };
+
+    plugin.init = function(api) {
+        plugin.api = api;
+
+        delete plugin.init;
+
+        plugin.upload = function(input, options = {}) {
+            var file = input.files[0];
+            var upload = new BKTUploaderUpload(file, options);
+
+            let defaults = {
+                autoStart: true,
+            }
+
+            var options = $.extend(defaults, options);
+
+            if (options.autoStart) {
+                upload.start();
+            }
+
+            return upload;
+        }
+
+        plugin.openUploader = openUploader;
+        plugin.openEditor = openEditor;
     };
 
     return plugin;
