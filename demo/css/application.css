@@ -1,0 +1,16 @@
+@-ms-viewport{
+    width: device-width;
+}
+
+html {
+    box-sizing: border-box;
+    -ms-overflow-style: scrollbar
+}
+
+* { -webkit-overflow-scrolling: touch; }
+*, ::before, ::after { box-sizing: border-box; }
+
+body {
+    background-color: #ebecee;
+    font-family: 'OpenSans';
+}

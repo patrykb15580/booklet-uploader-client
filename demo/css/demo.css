@@ -1,11 +1,11 @@
 #uploader,
 #editor {
-    display: flex;
+    display: block;
     padding: 30px;
 }
 
 .settings {
-    flex: 0 0 400px;
+
 }
 
 
@@ -60,7 +60,7 @@
 }
 
 #option--max-files {
-    width: 40px;
+    width: 60px;
 }
 
 
@@ -72,7 +72,7 @@
     display: block;
     background-color: #f3f1f2;
     flex: 1 1 auto;
-    margin: 0px;
+    margin: 30px 0px 0px 0px;
     padding: 15px;
     border: 1px solid #cecece;
     border-radius: 10px;
@@ -84,3 +84,22 @@
 .result .boolean { color: blue; }
 .result .null { color: magenta; }
 .result .key { color: red; }
+
+
+
+
+@media only screen and (min-width: 992px) {
+    #uploader,
+    #editor {
+        display: flex;
+    }
+
+    .settings {
+        flex: 0 0 400px;
+    }
+
+    .result {
+        flex: 1 1 auto;
+        margin-top: 0px;
+    }
+}

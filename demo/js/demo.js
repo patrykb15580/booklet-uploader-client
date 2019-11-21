@@ -44,6 +44,7 @@
     $(function() {
         // var file_hash = null;
         BookletUploader.init('/src/');
+        BookletUploaderOld.init('/src/');
 
         $('#option--multiple').on('change', function(e) {
             if ($(this).is(':checked')) {
@@ -59,7 +60,6 @@
 
         $('#open-uploader').on('click', function() {
             var options = $('#uploader-settings').serializeObject();
-
             var uploader = BookletUploader.openUploader(options);
 
             uploader.done(function(files) {
@@ -67,6 +67,34 @@
                 var text = syntaxHighlight(json);
 
                 $('#uploader-result').html(text);
+
+                $.each(files, function(i, file) {
+                    console.log(file);
+                });
+            }).fail(function() {
+                var json = JSON.stringify({
+                    status: 'error',
+                    message: 'Uploader closed or error occured'
+                }, undefined, 4);
+                var text = syntaxHighlight(json);
+
+                $('#uploader-result').html(text);
+            });
+        });
+
+        $('#open-old-uploader').on('click', function() {
+            var options = $('#uploader-settings').serializeObject();
+            var uploader = BookletUploaderOld.openUploader(options);
+
+            uploader.done(function(files) {
+                var json = JSON.stringify(files, undefined, 4);
+                var text = syntaxHighlight(json);
+
+                $('#uploader-result').html(text);
+
+                $.each(files, function(i, file) {
+                    console.log(file);
+                });
             }).fail(function() {
                 var json = JSON.stringify({
                     status: 'error',
@@ -109,9 +137,48 @@
             var options = $('#editor-settings').serializeObject();
             var editor = BookletUploader.openEditor(file_hash, options);
 
-            editor.done(function(file) {
-                var json = JSON.stringify(file, undefined, 4);
+            editor.done(function(result) {
+                result.done(function(file) {
+                    var json = JSON.stringify(file, undefined, 4);
+                    var text = syntaxHighlight(json);
+
+                    $('#editor-result').html(text);
+                }).fail(function() {
+                    var json = JSON.stringify({
+                        status: 'error',
+                        message: 'Update file error',
+                    }, undefined, 4);
+                    var text = syntaxHighlight(json);
+
+                    $('#editor-result').html(text);
+                });
+            }).fail(function() {
+                var json = JSON.stringify({
+                    status: 'error',
+                    message: 'Editor closed or error occured'
+                }, undefined, 4);
                 var text = syntaxHighlight(json);
+
+                $('#editor-result').html(text);
+            });
+        });
+
+        $('#open-old-editor').on('click', function() {
+            var file_hash = $('#file-id').val();
+            var options = $('#editor-settings').serializeObject();
+            var editor = BookletUploaderOld.openEditor(file_hash, options);
+
+            editor.done(function(file) {
+                result.done(function(file) {
+                    var json = JSON.stringify(file, undefined, 4);
+                    var text = syntaxHighlight(json);
+                }).fail(function() {
+                    var json = JSON.stringify({
+                        status: 'error',
+                        message: 'Update file error',
+                    }, undefined, 4);
+                    var text = syntaxHighlight(json);
+                });
 
                 $('#editor-result').html(text);
             }).fail(function() {
