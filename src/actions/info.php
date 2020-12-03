@@ -12,7 +12,7 @@ $file = $response_body->data ?? null;
 if ($file) {
     Response::success([
         'file' => $file,
-        'modifiers' => Modifiers::listFromString($file->modifiers)
+        'modifiers' => Modifiers::listFromString($file->modifiers ?? '')
     ]);
 }
 
